@@ -1,19 +1,19 @@
 import type { EngineConfig } from "@/engine/types";
 
 export const DEFAULT_ENGINE_CONFIG: EngineConfig = {
-  version: "2026-10-03.phase0",
+  version: "2026-10-03.phase1",
   weights: {
-    revenge: 0.22,
-    overtrade: 0.16,
-    late_night: 0.1,
-    loss_hold: 0.12,
-    pact_breach: 0.2,
-    money_source: 0.2
+    revenge: 0.25,
+    overtrade: 0.10,
+    late_night: 0.10,
+    loss_hold: 0.05,
+    pact_breach: 0.25,
+    money_source: 0.25
   },
   tiers: {
     l1: 0.25,
-    l2: 0.5,
-    l3: 0.8
+    l2: 0.50,
+    l3: 0.75
   }
 };
 
