@@ -1,6 +1,6 @@
 # ROADMAP.md: Thehrav Full-Stack PWA
 
-> Companion to `SPEC.md`, `ARCHITECTURE.md`, `TASKS.md`, and `TRACKER.md`.
+> Companion to `SPEC.md`, `ARCHITECTURE.md`, `IMPLEMENTATION_PLAN.md`, `TASKS.md`, and `TRACKER.md`.
 > Task IDs T1-T35 are identical across the planning documents.
 
 ---

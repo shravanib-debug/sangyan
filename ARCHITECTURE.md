@@ -1,6 +1,6 @@
 # ARCHITECTURE.md: Thehrav (SANGYAN Track D)
 
-> Read order: `SPEC.md` (what and why) -> this file (how) -> `TASKS.md` (work breakdown) -> `TRACKER.md` (live status).
+> Read order: `SPEC.md` (what and why) -> this file (how) -> `IMPLEMENTATION_PLAN.md` (phase order) -> `TASKS.md` (work breakdown) -> `TRACKER.md` (live status).
 > If documents conflict, `SPEC.md` section 3 (guardrails), section 8 (maths), and this file's security invariants win. Record the correction in `TRACKER.md`.
 > **MUST / MUST NOT** rules are test-enforced. **SHOULD** is a strong default. Architecture decisions are recorded in section 22.
 

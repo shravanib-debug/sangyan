@@ -1,6 +1,6 @@
 # TASKS.md: Team Work Breakdown (Thehrav Full-Stack PWA)
 
-> Status lives in `TRACKER.md`. Product rules and maths live in `SPEC.md`. Interfaces and infrastructure rules live in `ARCHITECTURE.md`.
+> Status lives in `TRACKER.md`. Phase order lives in `IMPLEMENTATION_PLAN.md`. Product rules and maths live in `SPEC.md`. Interfaces and infrastructure rules live in `ARCHITECTURE.md`.
 > Every completed task updates its `TRACKER.md` row with evidence.
 
 ---
