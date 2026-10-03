@@ -5,7 +5,7 @@ import nextTypescript from "eslint-config-next/typescript";
 export default defineConfig([
   ...nextVitals,
   ...nextTypescript,
-  globalIgnores([".next/**", "coverage/**", "public/sw.js", "apps/broker-worker/dist/**"]),
+  globalIgnores([".next/**", "coverage/**", "public/sw.js", "public/push-sw.js", "apps/broker-worker/dist/**", "supabase/functions/**"]),
   {
     settings: {
       react: {

@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
+
+import type { BorrowKind, CheckIn, FundSource } from "@/engine/types";
+import { runCheckIn } from "@/services/checkin-service";
 import { localDatabase } from "@/storage/local/database";
 import { enqueueSyncItem } from "@/storage/local/sync";
-import { evaluateRisk } from "@/engine/score";
-import { DEFAULT_ENGINE_CONFIG } from "@/config/defaults";
-import type { CheckIn, Pact, Trade, WorkerDetectRequest, BorrowKind, FundSource } from "@/engine/types";
+
+const fieldClass =
+  "w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all";
 
 export default function CheckinPage() {
   const { t } = useTranslation();
@@ -15,82 +18,32 @@ export default function CheckinPage() {
 
   const [amount, setAmount] = useState<number>(0);
   const [source, setSource] = useState<FundSource>("surplus");
-  const [borrowKind, setBorrowKind] = useState<BorrowKind>("none");
+  const [borrowKind, setBorrowKind] = useState<BorrowKind>("bank_loan");
   const [horizon, setHorizon] = useState<CheckIn["horizon"]>("intraday");
   const [reason, setReason] = useState("");
   const [exitCondition, setExitCondition] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
 
-  const [activePact, setActivePact] = useState<Pact | null>(null);
-  const [trades, setTrades] = useState<Trade[]>([]);
-
-  useEffect(() => {
-    async function loadData() {
-      const now = new Date().toISOString();
-      const pacts = await localDatabase.pacts.orderBy("effectiveAt").reverse().toArray();
-      const currentPact = pacts.find(p => p.effectiveAt <= now) || null;
-      setActivePact(currentPact);
-
-      // Load trades for the last 24h for evaluation context
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const recentTrades = await localDatabase.trades
-        .where("timestamp")
-        .aboveOrEqual(yesterday)
-        .toArray();
-      setTrades(recentTrades);
+  const handleEvaluate = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setFailed(false);
+    try {
+      const outcome = await runCheckIn(
+        { amountRupees: amount, source, borrowKind, horizon, reason, exitCondition },
+        {
+          db: localDatabase,
+          now: () => Date.now(),
+          newId: () => crypto.randomUUID(),
+          enqueue: (entityType, payload, id) => enqueueSyncItem(entityType, payload, id)
+        }
+      );
+      router.push(`/pause?pauseId=${outcome.pauseId}`);
+    } catch {
+      setFailed(true);
+      setBusy(false);
     }
-    loadData();
-  }, []);
-
-  const handleEvaluate = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const checkIn: CheckIn = {
-      id: crypto.randomUUID(),
-      timestamp: new Date().toISOString(),
-      amountPaise: amount * 100,
-      fundSource: source,
-      borrowKind: source === "borrowed" ? borrowKind : "none",
-      horizon,
-      reason,
-      exitCondition
-    };
-
-    // Save checkin
-    await localDatabase.checkins.put(checkIn);
-
-    // Evaluate Risk
-    const request: WorkerDetectRequest = {
-      history: trades,
-      pact: activePact || {
-        id: "default",
-        dailyLossLimitPaise: 500000,
-        maximumTradesPerDay: 5,
-        cooldownAfterLossMinutes: 30,
-        blockedWindows: [],
-        blockBorrowedFunds: true,
-        blockEmergencyFunds: true,
-        revision: 1,
-        effectiveAt: checkIn.timestamp
-      },
-      checkIn,
-      nowEpochMs: Date.now(),
-      config: DEFAULT_ENGINE_CONFIG
-    };
-
-    const riskResult = evaluateRisk(request);
-    await localDatabase.riskAssessments.put(riskResult);
-
-    await enqueueSyncItem("checkin", checkIn, checkIn.id);
-    await enqueueSyncItem("pause", {
-      id: crypto.randomUUID(),
-      assessmentId: riskResult.assessmentId,
-      tier: riskResult.tier,
-      startedAt: riskResult.evaluatedAt,
-      expiresAt: null, // set by the worker or pause screen if applicable
-      outcome: "waiting"
-    });
-
-    router.push(`/pause?assessmentId=${riskResult.assessmentId}`);
   };
 
   return (
@@ -104,23 +57,26 @@ export default function CheckinPage() {
         <form onSubmit={handleEvaluate} className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
           <div className="p-5 space-y-5">
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">{t("checkin.amountLabel")}</label>
-              <input 
-                type="number" 
-                value={amount || ''}
-                onChange={e => setAmount(Number(e.target.value))}
+              <label htmlFor="amount" className="block text-sm font-bold text-gray-700 mb-1">
+                {t("checkin.amountLabel")}
+              </label>
+              <input
+                id="amount"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                value={amount || ""}
+                onChange={(e) => setAmount(Number(e.target.value))}
                 required
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-mono"
+                className={`${fieldClass} font-mono`}
               />
             </div>
-            
+
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">{t("checkin.sourceLabel")}</label>
-              <select 
-                value={source} 
-                onChange={e => setSource(e.target.value as FundSource)}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-              >
+              <label htmlFor="source" className="block text-sm font-bold text-gray-700 mb-1">
+                {t("checkin.sourceLabel")}
+              </label>
+              <select id="source" value={source} onChange={(e) => setSource(e.target.value as FundSource)} className={fieldClass}>
                 <option value="surplus">{t("checkin.sourceSurplus")}</option>
                 <option value="savings">{t("checkin.sourceSavings")}</option>
                 <option value="emergency_fund">{t("checkin.sourceEmergency")}</option>
@@ -129,27 +85,33 @@ export default function CheckinPage() {
             </div>
 
             {source === "borrowed" && (
-              <div className="animate-in fade-in slide-in-from-top-2">
-                <label className="block text-sm font-bold text-gray-700 mb-1">{t("checkin.borrowKindLabel")}</label>
-                <select 
-                  value={borrowKind} 
-                  onChange={e => setBorrowKind(e.target.value as BorrowKind)}
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+              <div>
+                <label htmlFor="borrowKind" className="block text-sm font-bold text-gray-700 mb-1">
+                  {t("checkin.borrowKindLabel")}
+                </label>
+                <select
+                  id="borrowKind"
+                  value={borrowKind}
+                  onChange={(e) => setBorrowKind(e.target.value as BorrowKind)}
+                  className={fieldClass}
                 >
-                  <option value="bank_loan">Bank Loan</option>
-                  <option value="instant_loan">Instant Loan App</option>
-                  <option value="credit_card">Credit Card</option>
-                  <option value="other">Other / Friend</option>
+                  <option value="bank_loan">{t("checkin.borrowBank")}</option>
+                  <option value="instant_loan">{t("checkin.borrowInstant")}</option>
+                  <option value="credit_card">{t("checkin.borrowCard")}</option>
+                  <option value="other">{t("checkin.borrowOther")}</option>
                 </select>
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">{t("checkin.horizonLabel")}</label>
-              <select 
-                value={horizon} 
-                onChange={e => setHorizon(e.target.value as CheckIn["horizon"])}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              <label htmlFor="horizon" className="block text-sm font-bold text-gray-700 mb-1">
+                {t("checkin.horizonLabel")}
+              </label>
+              <select
+                id="horizon"
+                value={horizon}
+                onChange={(e) => setHorizon(e.target.value as CheckIn["horizon"])}
+                className={fieldClass}
               >
                 <option value="intraday">{t("checkin.horizonIntraday")}</option>
                 <option value="days">{t("checkin.horizonDays")}</option>
@@ -160,32 +122,46 @@ export default function CheckinPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">{t("checkin.reasonLabel")}</label>
-              <textarea 
-                value={reason} 
-                onChange={e => setReason(e.target.value)}
+              <label htmlFor="reason" className="block text-sm font-bold text-gray-700 mb-1">
+                {t("checkin.reasonLabel")}
+              </label>
+              <textarea
+                id="reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
                 required
+                maxLength={1000}
                 rows={2}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className={fieldClass}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">{t("checkin.exitLabel")}</label>
-              <textarea 
-                value={exitCondition} 
-                onChange={e => setExitCondition(e.target.value)}
+              <label htmlFor="exit" className="block text-sm font-bold text-gray-700 mb-1">
+                {t("checkin.exitLabel")}
+              </label>
+              <textarea
+                id="exit"
+                value={exitCondition}
+                onChange={(e) => setExitCondition(e.target.value)}
                 required
+                maxLength={500}
                 rows={2}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className={fieldClass}
               />
             </div>
           </div>
-          
-          <div className="p-4 bg-gray-50 border-t border-gray-100">
-            <button 
+
+          <div className="p-4 bg-gray-50 border-t border-gray-100 space-y-3">
+            {failed && (
+              <p role="alert" className="text-sm text-red-700">
+                {t("common.error")}
+              </p>
+            )}
+            <button
               type="submit"
-              className="w-full p-4 bg-blue-600 text-white rounded-xl font-bold shadow-md hover:bg-blue-700 transition-colors"
+              disabled={busy}
+              className="w-full p-4 bg-blue-600 text-white rounded-xl font-bold shadow-md hover:bg-blue-700 disabled:opacity-60 transition-colors"
             >
               {t("checkin.evaluateButton")}
             </button>

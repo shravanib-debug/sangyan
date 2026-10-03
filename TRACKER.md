@@ -80,8 +80,8 @@ Progress: **22 / 35 tasks done**.
 | T8 | Pact engine and stricter conflict policy | B + D review | P0 | B2 | T2 | DONE | B | main | pact.test.ts pass | |
 | T9 | Simulator engine | B | P0 | B3 | T2 | DONE | B | main | simulator.test.ts pass | |
 | T10 | Copy guardrails | D | P0 | B1 | T1 | DONE | B | main | guardrails.test.ts pass | |
-| T11 | Onboarding, guest-first choice, and Pact UI | C | P0 | B2 | T2,T26 | DONE | C | main | UI implemented | Integrate sign-in when T30 lands |
-| T12 | Offline check-in and pause flow | C | P0 | B2-B3 | T6-T8 or stubs | DONE | C | main | UI implemented | |
+| T11 | Onboarding, guest-first choice, and Pact UI | C | P0 | B2 | T2,T26 | DONE | C | main | journey.test.ts; offline-journey.spec.ts (offline onboarding and Pact) | Sign-in lives in Settings |
+| T12 | Offline check-in and pause flow | C | P0 | B2-B3 | T6-T8 or stubs | DONE | C | main | journey.test.ts; offline-journey.spec.ts (explainable pause, offline, reload-safe timer) | |
 | T13 | Simulator UI | C | P0 | B4 | T9 | TODO | | | | |
 | T14 | Local import and review | C + B | P0 | B3-B4 | T3,T5 | TODO | | | | |
 | T15 | Behavioral metrics | B | P1 | B4 | T6,T8 | TODO | | | | |
@@ -99,12 +99,12 @@ Progress: **22 / 35 tasks done**.
 | T27 | Pitch deck | D | P0 | B3-B6 | M2 | TODO | | | | |
 | T28 | Demo script and video | D | P0 | B1,B5-B6 | M5 | TODO | | | | |
 | T29 | Supabase schema, migrations, grants, RLS | A + D review | P0 | B0-B2 | T1,T2 | DONE | A | main | test:db pass | |
-| T30 | Optional Auth and guest-data adoption | A + C, D review | P0 | B1-B3 | T29 | DONE | A | main | Auth client, login page | |
-| T31 | Route Handlers and offline sync | A + D review | P0 | B2-B4 | T2,T8,T29,T30 | DONE | A | main | Offline queue and sync API | |
-| T32 | Canonical broker-event pipeline, outbox, Edge Function, Web Push | A + C, D review | P0 | B4-B5 | T6,T29,T31,T35 | DONE | A | main | Ingestion API pipeline implemented | |
+| T30 | Optional Auth and guest-data adoption | A + C, D review | P0 | B1-B3 | T29 | DONE | A | main | Settings sync consent, guest queue adopts idempotently (db/app.test.ts); real Supabase Auth not run on this machine | |
+| T31 | Route Handlers and offline sync | A + D review | P0 | B2-B4 | T2,T8,T29,T30 | DONE | A | main | db/app.test.ts (idempotency, server-authoritative Pact, redaction), e2e/api-security.spec.ts | |
+| T32 | Canonical broker-event pipeline, outbox, Edge Function, Web Push | A + C, D review | P0 | B4-B5 | T6,T29,T31,T35 | DONE | A | main | db/schema.test.ts, db/worker-pipeline.test.ts (one pause, one outbox row); Edge Function written, not executed here | |
 | T33 | Docker and environment workflow | A | P0 | B0-B2 | T1,T29 | DONE | A | main | docker:build pass | |
-| T34 | Zerodha connection and credential lifecycle | A + C, D review | P0 | B3-B4 | T29,T30,T26 | DONE | A | main | Broker OAuth actions and API | |
-| T35 | Persistent read-only broker worker | A + B, D review | P0 | B4-B5 | T2,T6,T29,T34 | DONE | A | main | Worker loop implemented | |
+| T34 | Zerodha connection and credential lifecycle | A + C, D review | P0 | B3-B4 | T29,T30,T26 | DONE | A | main | lib/broker.test.ts, lib/crypto.test.ts; live Kite exchange untested (needs approved credentials) | |
+| T35 | Persistent read-only broker worker | A + B, D review | P0 | B4-B5 | T2,T6,T29,T34 | DONE | A | main | worker/worker.test.ts, db/worker-pipeline.test.ts; live Kite WebSocket untested | |
 
 ---
 
@@ -202,7 +202,7 @@ Progress: **22 / 35 tasks done**.
 
 | ID | Date | Task | Blocker | Owner to unblock | Status |
 |---|---|---|---|---|---|
-| | | | | | |
+| 2026-10-03 | Migration 202610030002_broker_pipeline.sql: broker_login_states, outbox dedupe index, ingest_broker_event(), claim_broker_connections(), client write revocation on pacts/pact_changes | A | D review pending | n/a | T31, T32, T34, T35 |
 
 ---
 
@@ -220,6 +220,8 @@ Progress: **22 / 35 tasks done**.
 | D-008 | 2026-10-03 | Run broker WebSockets in a persistent Dockerized Node worker | Vercel and Edge functions are bounded request runtimes | T33, T35, deployment |
 | D-009 | 2026-10-03 | Keep synthetic replay only for tests and clearly labelled fallback | Deterministic tests and demo resilience without pretending a broker connection | T4, T22, T28, T32, T35 |
 | D-010 | 2026-10-03 | Describe Thehrav as an after-event behavioral circuit breaker | Broker updates cannot block the observed or next order in the broker app | Product copy, demo, release gate |
+| D-011 | 2026-10-03 | Replace Workbox generateSW with a small dependency-free service worker (Workbox only builds the manifest) | generateSW's navigateFallback served the offline page for every non-precached navigation, even online | T24, offline journey |
+| D-012 | 2026-10-03 | Clients get read-only access to pacts and pact_changes; all Pact writes go through the server | A direct client write could skip the 24-hour loosening delay | T8, T29, T31 |
 
 ---
 

@@ -1,20 +1,24 @@
 # syntax=docker/dockerfile:1.7
 FROM node:24-alpine AS base
-ENV PNPM_HOME=/pnpm
-ENV PATH=$PNPM_HOME:$PATH
-RUN corepack enable
 WORKDIR /app
 
 FROM base AS dependencies
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json package-lock.json* ./
 COPY apps/broker-worker/package.json apps/broker-worker/package.json
-RUN pnpm install --frozen-lockfile
+RUN npm install
 
 FROM base AS builder
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN pnpm build
+# Public values are compiled into the client bundle; pass real ones at build time.
+ARG NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+ARG NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=build-placeholder
+ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY=
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY \
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY=$NEXT_PUBLIC_VAPID_PUBLIC_KEY
+RUN npm run build
 
 FROM node:24-alpine AS runner
 WORKDIR /app

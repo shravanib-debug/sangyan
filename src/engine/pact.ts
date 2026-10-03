@@ -83,3 +83,65 @@ export function getEffectivePact(pacts: Pact[], nowEpochMs: number): Pact | null
 
   return active.length > 0 ? (active[0] || null) : null;
 }
+
+export interface PactChangeResult {
+  /** Rules effective immediately: the stricter value of every field. */
+  effective: Pact;
+  /** Looser requested values, applicable only after the delay. Absent for pure tightening. */
+  pending?: Pact;
+  classification: "none" | "tighten" | "loosen" | "mixed";
+}
+
+function samePactValues(a: Pact, b: Pact): boolean {
+  return (
+    a.dailyLossLimitPaise === b.dailyLossLimitPaise &&
+    a.maximumTradesPerDay === b.maximumTradesPerDay &&
+    a.cooldownAfterLossMinutes === b.cooldownAfterLossMinutes &&
+    a.blockBorrowedFunds === b.blockBorrowedFunds &&
+    a.blockEmergencyFunds === b.blockEmergencyFunds &&
+    JSON.stringify(a.blockedWindows) === JSON.stringify(b.blockedWindows)
+  );
+}
+
+/**
+ * Applies a requested Pact edit. Tightening is immediate; any looser field is held
+ * back for `loosenDelayMs`. Because `effective` is the field-wise strict merge, a
+ * mixed edit tightens now and loosens later. Pure: time is injected.
+ */
+export function applyPactChange(
+  current: Pact | null,
+  proposed: Pact,
+  nowEpochMs: number,
+  loosenDelayMs: number
+): PactChangeResult {
+  const nowIso = new Date(nowEpochMs).toISOString();
+  if (!current) {
+    return { effective: { ...proposed, revision: 1, effectiveAt: nowIso }, classification: "tighten" };
+  }
+
+  const strict = mergePactsStrict(current, proposed);
+  const effective: Pact = {
+    ...strict,
+    id: current.id,
+    revision: current.revision + 1,
+    effectiveAt: nowIso
+  };
+  if (samePactValues(current, proposed)) {
+    return { effective: current, classification: "none" };
+  }
+  if (isTighterOrEqual(current, proposed)) {
+    return { effective, classification: "tighten" };
+  }
+
+  const tightenedSomething = !samePactValues(current, effective);
+  return {
+    effective: tightenedSomething ? effective : current,
+    pending: {
+      // Keeps the request's own id: it must not collide with the effective rules' id.
+      ...proposed,
+      revision: (tightenedSomething ? effective.revision : current.revision) + 1,
+      effectiveAt: new Date(nowEpochMs + loosenDelayMs).toISOString()
+    },
+    classification: tightenedSomething ? "mixed" : "loosen"
+  };
+}

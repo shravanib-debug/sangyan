@@ -10,6 +10,8 @@ export interface LocalSetting {
 export interface SyncQueueItem extends SyncMetadata {
   entityType: "pact" | "checkin" | "journal" | "pause";
   payload: unknown;
+  attempts?: number;
+  lastError?: string;
 }
 
 export class ThehravDatabase extends Dexie {

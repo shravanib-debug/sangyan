@@ -1,11 +1,13 @@
 "use client";
 
-import { login, signup } from "../../auth/actions";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { localDatabase } from "@/storage/local/database";
+import { useTranslation } from "react-i18next";
+
+import { login, signup } from "../../auth/actions";
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -14,16 +16,15 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      // Mark onboarding as completed when user tries to login/signup
-      await localDatabase.settings.put({ key: "onboardingCompleted", value: true });
-      
-      const res = action === "login" ? await login(formData) : await signup(formData);
-      if (res?.error) {
-        setError(res.error);
+      const result = action === "login" ? await login(formData) : await signup(formData);
+      if (result?.error) {
+        setError(result.error);
         setLoading(false);
       }
-    } catch (e: unknown) {
-      setError((e as Error).message || "An unexpected error occurred");
+    } catch (caught: unknown) {
+      // A successful action redirects; Next signals that by throwing, which must not show as an error.
+      if ((caught as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw caught;
+      setError(t("auth.unexpected"));
       setLoading(false);
     }
   }
@@ -31,57 +32,64 @@ export default function LoginPage() {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 text-gray-900 px-6 py-12">
       <div className="max-w-md mx-auto w-full flex-1 flex flex-col justify-center space-y-6">
-        <h1 className="text-3xl font-bold text-center">Sign In / Sign Up</h1>
-        
+        <h1 className="text-3xl font-bold text-center">{t("auth.title")}</h1>
+
         {error && (
-          <div className="p-4 bg-red-50 text-red-700 border border-red-200 rounded-xl text-sm">
+          <div role="alert" className="p-4 bg-red-50 text-red-800 border border-red-300 rounded-xl text-sm">
             {error}
           </div>
         )}
 
         <form className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
-            <input 
-              name="email" 
-              type="email" 
-              required 
+            <label htmlFor="email" className="block text-sm font-medium mb-1">
+              {t("auth.email")}
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
               className="w-full p-4 border border-gray-300 rounded-xl"
-              placeholder="you@example.com"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
-            <input 
-              name="password" 
-              type="password" 
-              required 
+            <label htmlFor="password" className="block text-sm font-medium mb-1">
+              {t("auth.password")}
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              minLength={8}
+              autoComplete="current-password"
               className="w-full p-4 border border-gray-300 rounded-xl"
-              placeholder="••••••••"
             />
           </div>
           <div className="grid gap-4 pt-4">
-            <button 
-              formAction={(f) => handleAction(f, "login")}
+            <button
+              formAction={(formData) => handleAction(formData, "login")}
               disabled={loading}
-              className="w-full p-4 bg-blue-600 text-white rounded-xl font-bold shadow-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="w-full p-4 bg-blue-600 text-white rounded-xl font-bold shadow-md hover:bg-blue-700 disabled:opacity-50"
             >
-              Log In
+              {t("auth.login")}
             </button>
-            <button 
-              formAction={(f) => handleAction(f, "signup")}
+            <button
+              formAction={(formData) => handleAction(formData, "signup")}
               disabled={loading}
-              className="w-full p-4 bg-white border-2 border-gray-200 text-gray-800 rounded-xl font-bold hover:border-gray-300 disabled:opacity-50 transition-colors"
+              className="w-full p-4 bg-white border-2 border-gray-300 text-gray-900 rounded-xl font-bold hover:bg-gray-50 disabled:opacity-50"
             >
-              Sign Up
+              {t("auth.signup")}
             </button>
-            <button 
+            <button
               type="button"
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/home")}
               disabled={loading}
-              className="w-full p-2 text-gray-500 font-medium hover:text-gray-800 disabled:opacity-50 transition-colors"
+              className="w-full p-3 text-gray-700 font-medium disabled:opacity-50"
             >
-              Cancel
+              {t("auth.cancel")}
             </button>
           </div>
         </form>

@@ -1,9 +1,6 @@
 import { HomeScreen } from "@/features/app/home-screen";
-import { createClient } from "@/lib/supabase/server";
 
-export default async function HomePage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  return <HomeScreen user={user} />;
+// Static shell: session and inbox load on the client, so this page can be precached and work offline.
+export default function HomePage() {
+  return <HomeScreen />;
 }

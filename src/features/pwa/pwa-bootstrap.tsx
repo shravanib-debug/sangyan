@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation";
 import { useSyncExternalStore, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { syncLocalQueue } from "@/storage/local/sync";
+
 interface InstallPromptEvent extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
@@ -53,6 +55,18 @@ export function PwaBootstrap() {
 
     return () => {
       window.removeEventListener("beforeinstallprompt", onInstallPrompt);
+    };
+  }, []);
+
+  // Queued changes upload when sync is on: at start, when connectivity returns, and periodically.
+  useEffect(() => {
+    void syncLocalQueue();
+    const onOnline = () => void syncLocalQueue();
+    window.addEventListener("online", onOnline);
+    const interval = setInterval(() => void syncLocalQueue(), 60_000);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      clearInterval(interval);
     };
   }, []);
 

@@ -34,7 +34,8 @@ export const brokerEventSchema = z
     quantity: z.number().positive().finite().optional(),
     averagePricePaise: nonNegativePaiseSchema.optional(),
     pnlPaise: z.number().int().finite().optional(),
-    dedupeHash: z.string().regex(/^[a-f0-9]{64}$/)
+    dedupeHash: z.string().regex(/^[a-f0-9]{64}$/),
+    simulated: z.boolean().optional()
   })
   .strict();
 
@@ -104,3 +105,39 @@ export const brokerConnectionSummarySchema = z
     lastHeartbeatAt: isoDateTimeSchema.optional()
   })
   .strict();
+
+// Sync payloads never carry a user id: the server uses the authenticated user.
+export const checkInSyncSchema = checkInSchema.omit({ userId: true }).extend({ assessmentId: uuidSchema }).strict();
+
+export const pactSyncSchema = pactSchema.omit({ userId: true }).strict();
+
+export const pauseSyncSchema = z
+  .object({
+    id: uuidSchema,
+    assessmentId: uuidSchema,
+    tier: z.enum(["L0", "L1", "L2", "L3"]),
+    startedAt: isoDateTimeSchema,
+    expiresAt: isoDateTimeSchema.nullable().optional(),
+    outcome: z.enum(["waiting", "continued", "abandoned", "expired"]),
+    revision: z.number().int().nonnegative().default(0)
+  })
+  .strict();
+
+export const journalSyncSchema = z
+  .object({
+    id: uuidSchema,
+    createdAt: isoDateTimeSchema,
+    reason: z.string().trim().min(1).max(1000),
+    horizon: z.enum(["intraday", "days", "weeks", "months", "years"]),
+    exitCondition: z.string().trim().min(1).max(500),
+    transcriptSource: z.enum(["typed", "on_device_voice"])
+  })
+  .strict();
+
+export const syncItemSchema = z.object({
+  id: z.string().trim().min(1).max(160),
+  entityType: z.enum(["pact", "checkin", "pause", "journal"]),
+  payload: z.unknown()
+});
+
+export const syncRequestSchema = z.object({ items: z.array(syncItemSchema).max(50) });

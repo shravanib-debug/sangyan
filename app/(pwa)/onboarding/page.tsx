@@ -19,9 +19,9 @@ export default function OnboardingPage() {
     setStep(2);
   };
 
-  const completeOnboarding = async () => {
+  const completeOnboarding = async (destination: "/pact" | "/login") => {
     await localDatabase.settings.put({ key: "onboardingCompleted", value: true });
-    router.push("/pact");
+    router.push(destination);
   };
 
   return (
@@ -44,6 +44,7 @@ export default function OnboardingPage() {
             <p className="text-gray-600 leading-relaxed text-lg">
               {t("onboarding.privacyBody")}
             </p>
+            <p className="text-gray-600 text-base">{t("common.limitation")}</p>
             <div className="pt-8">
               <button 
                 onClick={handlePrivacyAccept} 
@@ -61,15 +62,13 @@ export default function OnboardingPage() {
             <p className="text-gray-500 text-sm mb-6">{t("onboarding.authNote")}</p>
             <div className="grid gap-4">
               <button 
-                onClick={completeOnboarding} 
+                onClick={() => void completeOnboarding("/pact")} 
                 className="w-full p-4 bg-white border-2 border-gray-200 text-gray-800 rounded-xl font-bold hover:border-gray-300 transition-colors"
               >
                 {t("onboarding.authGuest")}
               </button>
               <button 
-                onClick={() => {
-                  router.push("/login");
-                }} 
+                onClick={() => void completeOnboarding("/login")} 
                 className="w-full p-4 bg-blue-600 text-white rounded-xl font-bold shadow-md hover:bg-blue-700 transition-colors"
               >
                 {t("onboarding.authSync")}

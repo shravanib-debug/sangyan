@@ -1,75 +1,17 @@
 import { createServer } from "node:http";
+
 import { createClient } from "@supabase/supabase-js";
-import crypto from "node:crypto";
 
-const port = Number.parseInt(process.env.PORT ?? "8080", 10);
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseKey = process.env.SUPABASE_SECRET_KEY || "";
-const apiUrl = process.env.API_URL || "http://localhost:3000";
-const internalSecret = process.env.INTERNAL_WORKER_SECRET || "dev_secret";
+import { readConfig } from "./config.js";
+import { log } from "./log.js";
+import { Runner } from "./runner.js";
 
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-// Mock worker loop
-let isRunning = true;
-
-async function workerLoop() {
-  while (isRunning) {
-    try {
-      // Find all live connections
-      const { data: connections, error } = await supabase
-        .from("broker_connections")
-        .select("*")
-        .eq("status", "live");
-
-      if (error) {
-        console.error("Error fetching connections:", error);
-      } else {
-        for (const conn of connections || []) {
-          // Generate a synthetic event for this connection occasionally (e.g. 5% chance per tick)
-          if (Math.random() < 0.05) {
-            const eventId = crypto.randomUUID();
-            const payload = {
-              id: eventId,
-              userId: conn.user_id,
-              provider: conn.provider,
-              providerEventId: `ev_${Date.now()}`,
-              providerOrderId: `ord_${Date.now()}`,
-              observedAt: new Date().toISOString(),
-              receivedAt: new Date().toISOString(),
-              eventType: "trade_update",
-              status: "COMPLETE",
-              symbol: "MOCK_STOCK",
-              side: Math.random() > 0.5 ? "buy" : "sell",
-              quantity: Math.floor(Math.random() * 10) + 1,
-              averagePricePaise: Math.floor(Math.random() * 50000) + 10000,
-              dedupeHash: crypto.createHash('sha256').update(eventId).digest('hex')
-            };
-
-            await fetch(`${apiUrl}/api/broker/ingest`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${internalSecret}`
-              },
-              body: JSON.stringify({ event: payload })
-            }).catch(console.error);
-          }
-
-          // Update heartbeat
-          await supabase.from("broker_connections")
-            .update({ last_heartbeat_at: new Date().toISOString() })
-            .eq("id", conn.id);
-        }
-      }
-    } catch (e) {
-      console.error("Worker error:", e);
-    }
-    await new Promise(r => setTimeout(r, 5000));
-  }
-}
-
-workerLoop();
+const config = readConfig();
+const db = createClient(config.supabaseUrl, config.serviceRoleKey, {
+  auth: { persistSession: false, autoRefreshToken: false }
+});
+const runner = new Runner(config, db);
+runner.start();
 
 const server = createServer((request, response) => {
   if (request.url !== "/health") {
@@ -77,27 +19,24 @@ const server = createServer((request, response) => {
     response.end(JSON.stringify({ error: "not_found" }));
     return;
   }
-
-  response.writeHead(200, {
-    "Content-Type": "application/json",
-    "Cache-Control": "no-store"
-  });
+  // Unhealthy when the lease loop has stalled, so the host restarts the container.
+  const healthy = Date.now() - runner.stats.lastTickAt < config.tickMs * 6;
+  response.writeHead(healthy ? 200 : 503, { "Content-Type": "application/json", "Cache-Control": "no-store" });
   response.end(
     JSON.stringify({
-      status: "ok",
+      status: healthy ? "ok" : "stalled",
       service: "thehrav-broker-worker",
-      mode: process.env.BROKER_WORKER_MODE ?? "replay",
+      mode: config.mode,
+      activeSessions: runner.stats.activeSessions
     })
   );
 });
 
-server.listen(port, "0.0.0.0", () => {
-  console.log(JSON.stringify({ level: "info", event: "worker_started", port }));
-});
+server.listen(config.port, "0.0.0.0", () => log("info", "worker_started"));
 
 function shutdown(signal: string) {
-  console.log(JSON.stringify({ level: "info", event: "worker_stopping", signal }));
-  isRunning = false;
+  log("info", "worker_stopping", { code: signal });
+  runner.stop();
   server.close((error) => {
     process.exitCode = error ? 1 : 0;
   });

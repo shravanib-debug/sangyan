@@ -23,3 +23,12 @@ export function assertValidEngineConfig(config: EngineConfig): void {
     throw new Error("Engine weights must sum to 1.");
   }
 }
+
+/** Friction ladder durations. L3 lasts until the Pact cooldown elapses. */
+export const PAUSE_POLICY = {
+  l1Seconds: 10,
+  l2Seconds: 120
+} as const;
+
+/** Loosening a Pact only takes effect after this server-authoritative delay. */
+export const PACT_LOOSEN_DELAY_MS = 24 * 60 * 60 * 1000;

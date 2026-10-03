@@ -23,6 +23,7 @@ supabase/.temp/
 public/sw.js
 public/sw.js.map
 public/workbox-*.js
+public/workbox-lib/
 
 # operating systems and editors
 .DS_Store

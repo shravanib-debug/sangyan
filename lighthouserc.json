@@ -1,7 +1,7 @@
 {
   "ci": {
     "collect": {
-      "startServerCommand": "corepack pnpm start",
+      "startServerCommand": "npm run start",
       "startServerReadyPattern": "Ready in|started server|Local:",
       "url": ["http://127.0.0.1:3000/home"],
       "numberOfRuns": 1

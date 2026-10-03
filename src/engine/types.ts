@@ -45,6 +45,8 @@ export interface BrokerEvent {
   averagePricePaise?: number;
   pnlPaise?: number;
   dedupeHash: string;
+  /** True for replay/sandbox events; never presented as live broker activity. */
+  simulated?: boolean;
 }
 
 export interface Pact {
@@ -115,6 +117,7 @@ export interface PauseEvent {
   startedAt: ISODateTime;
   expiresAt?: ISODateTime;
   outcome: PauseOutcome;
+  revision?: number;
 }
 
 export interface SyncMetadata {

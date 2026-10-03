@@ -1,111 +1,91 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+
+import type { Pact } from "@/engine/types";
+import { loadPactState, savePact } from "@/services/pact-service";
 import { localDatabase } from "@/storage/local/database";
 import { enqueueSyncItem } from "@/storage/local/sync";
-import type { Pact } from "@/engine/types";
+
+const fieldClass =
+  "w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-mono";
+
+type SavedKind = "none" | "tighten" | "loosen" | "mixed";
 
 export default function PactPage() {
   const { t } = useTranslation();
-  
-  const [activePact, setActivePact] = useState<Pact | null>(null);
-  const [pendingPact, setPendingPact] = useState<Pact | null>(null);
-  const [nowTime, setNowTime] = useState<number | null>(null);
-  
+
+  const [pending, setPending] = useState<Pact | null>(null);
+  const [now, setNow] = useState<number | null>(null);
+  const [saved, setSaved] = useState<SavedKind | null>(null);
+
   const [lossLimit, setLossLimit] = useState(5000);
   const [maxTrades, setMaxTrades] = useState(5);
   const [cooldown, setCooldown] = useState(30);
   const [blockBorrowed, setBlockBorrowed] = useState(true);
   const [blockEmergency, setBlockEmergency] = useState(true);
 
-  useEffect(() => {
-    setNowTime(Date.now());
-    const interval = setInterval(() => setNowTime(Date.now()), 60000);
-    return () => clearInterval(interval);
-  }, []);
+  const [version, setVersion] = useState(0);
 
+  // Reload on mount and after each save (refilling the form), and tick so the countdown stays current.
   useEffect(() => {
-    async function loadPacts() {
-      // Load all pacts sorted by effectiveAt desc
-      const pacts = await localDatabase.pacts.orderBy("effectiveAt").reverse().toArray();
-      const now = new Date().toISOString();
-      
-      const active = pacts.find(p => p.effectiveAt <= now) || null;
-      const pending = pacts.find(p => p.effectiveAt > now) || null;
-      
-      setActivePact(active);
-      setPendingPact(pending);
-      
-      // If there's a pending pact, prefill with it, otherwise use active, or defaults
-      const sourcePact = pending || active;
-      if (sourcePact) {
-        setLossLimit(sourcePact.dailyLossLimitPaise / 100);
-        setMaxTrades(sourcePact.maximumTradesPerDay);
-        setCooldown(sourcePact.cooldownAfterLossMinutes);
-        setBlockBorrowed(sourcePact.blockBorrowedFunds);
-        setBlockEmergency(sourcePact.blockEmergencyFunds);
+    let cancelled = false;
+    async function load(fillForm: boolean) {
+      const nowMs = Date.now();
+      const state = await loadPactState(localDatabase, nowMs);
+      if (cancelled) return;
+      setPending(state.pending);
+      setNow(nowMs);
+      const source = fillForm ? (state.pending ?? state.effective) : null;
+      if (source) {
+        setLossLimit(source.dailyLossLimitPaise / 100);
+        setMaxTrades(source.maximumTradesPerDay);
+        setCooldown(source.cooldownAfterLossMinutes);
+        setBlockBorrowed(source.blockBorrowedFunds);
+        setBlockEmergency(source.blockEmergencyFunds);
       }
     }
-    loadPacts();
-  }, []);
+    void load(true);
+    const timer = setInterval(() => void load(false), 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [version]);
 
   const handleSave = async () => {
-    const nextRevision = activePact ? activePact.revision + 1 : 1;
-    
-    // Determine if it's tightening or loosening.
-    // If any parameter is looser than the active pact, it's delayed by 24h.
-    let isLoosening = false;
-    
-    if (activePact) {
-      if (
-        (lossLimit * 100) > activePact.dailyLossLimitPaise ||
-        maxTrades > activePact.maximumTradesPerDay ||
-        cooldown < activePact.cooldownAfterLossMinutes ||
-        (!blockBorrowed && activePact.blockBorrowedFunds) ||
-        (!blockEmergency && activePact.blockEmergencyFunds)
-      ) {
-        isLoosening = true;
+    const change = await savePact(
+      {
+        dailyLossLimitRupees: lossLimit,
+        maximumTradesPerDay: maxTrades,
+        cooldownAfterLossMinutes: cooldown,
+        blockBorrowedFunds: blockBorrowed,
+        blockEmergencyFunds: blockEmergency
+      },
+      {
+        db: localDatabase,
+        now: () => Date.now(),
+        newId: () => crypto.randomUUID(),
+        enqueue: (entityType, payload, id) => enqueueSyncItem(entityType, payload, id)
       }
-    }
-    
-    const effectiveAt = isLoosening 
-      ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-      : new Date().toISOString();
-
-    const newPact: Pact = {
-      id: crypto.randomUUID(),
-      dailyLossLimitPaise: lossLimit * 100,
-      maximumTradesPerDay: maxTrades,
-      cooldownAfterLossMinutes: cooldown,
-      blockedWindows: [{ startMinuteIst: 0, endMinuteIst: 360 }], // Default late night 12am to 6am
-      blockBorrowedFunds: blockBorrowed,
-      blockEmergencyFunds: blockEmergency,
-      revision: nextRevision,
-      effectiveAt
-    };
-
-    await localDatabase.pacts.put(newPact);
-    await enqueueSyncItem("pact", newPact, newPact.id);
-    alert(isLoosening ? t("pact.loosenDelayed") : t("pact.tightenImmediate"));
-    
-    // Reload
-    const pacts = await localDatabase.pacts.orderBy("effectiveAt").reverse().toArray();
-    const now = new Date().toISOString();
-    setActivePact(pacts.find(p => p.effectiveAt <= now) || null);
-    setPendingPact(pacts.find(p => p.effectiveAt > now) || null);
+    );
+    setSaved(change.classification);
+    setVersion((value) => value + 1);
   };
 
-  const calculateHoursToPending = () => {
-    if (!pendingPact || !nowTime) return null;
-    const diff = new Date(pendingPact.effectiveAt).getTime() - nowTime;
-    if (diff <= 0) return null;
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    return { hours, minutes };
-  };
+  const remaining =
+    pending && now !== null ? Math.max(0, new Date(pending.effectiveAt).getTime() - now) : null;
+  const hours = remaining === null ? 0 : Math.floor(remaining / 3_600_000);
+  const minutes = remaining === null ? 0 : Math.floor((remaining % 3_600_000) / 60_000);
 
-  const pendingTime = calculateHoursToPending();
+  const savedMessage: Record<SavedKind, string> = {
+    none: t("pact.savedNone"),
+    tighten: t("pact.savedTighten"),
+    loosen: t("pact.savedLoosen"),
+    mixed: t("pact.savedMixed")
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 text-gray-900 px-4 py-8">
@@ -115,75 +95,96 @@ export default function PactPage() {
           <p className="text-gray-500 mt-2">{t("pact.subtitle")}</p>
         </div>
 
-        {pendingPact && pendingTime && (
-          <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl">
-            <h3 className="text-sm font-bold text-orange-800 uppercase tracking-wider mb-1">
-              {t("pact.pendingLoosen", { hours: pendingTime.hours, minutes: pendingTime.minutes })}
-            </h3>
-            <p className="text-sm text-orange-700">
-              New looser rules are waiting out the 24-hour mandatory delay.
-            </p>
+        {pending && remaining !== null && remaining > 0 && (
+          <div className="p-4 bg-orange-50 border border-orange-300 rounded-xl" role="status">
+            <h2 className="text-sm font-bold text-orange-900 uppercase tracking-wider mb-1">
+              {t("pact.pendingLoosen", { hours, minutes })}
+            </h2>
+            <p className="text-sm text-orange-900">{t("pact.pendingNote")}</p>
           </div>
+        )}
+
+        {saved && (
+          <p role="status" className="p-3 bg-green-50 border border-green-300 rounded-xl text-sm text-green-900">
+            {savedMessage[saved]}
+          </p>
         )}
 
         <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
           <div className="p-5 space-y-5">
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">{t("pact.lossLimitLabel")}</label>
-              <input 
-                type="number" 
-                value={lossLimit} 
-                onChange={e => setLossLimit(Number(e.target.value))}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-mono"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">{t("pact.maxTradesLabel")}</label>
-              <input 
-                type="number" 
-                value={maxTrades} 
-                onChange={e => setMaxTrades(Number(e.target.value))}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-mono"
+              <label htmlFor="loss" className="block text-sm font-bold text-gray-700 mb-1">
+                {t("pact.lossLimitLabel")}
+              </label>
+              <input
+                id="loss"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                value={lossLimit}
+                onChange={(e) => setLossLimit(Number(e.target.value))}
+                className={fieldClass}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">{t("pact.cooldownLabel")}</label>
-              <input 
-                type="number" 
-                value={cooldown} 
-                onChange={e => setCooldown(Number(e.target.value))}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-mono"
+              <label htmlFor="trades" className="block text-sm font-bold text-gray-700 mb-1">
+                {t("pact.maxTradesLabel")}
+              </label>
+              <input
+                id="trades"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={100}
+                value={maxTrades}
+                onChange={(e) => setMaxTrades(Number(e.target.value))}
+                className={fieldClass}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="cooldown" className="block text-sm font-bold text-gray-700 mb-1">
+                {t("pact.cooldownLabel")}
+              </label>
+              <input
+                id="cooldown"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={1440}
+                value={cooldown}
+                onChange={(e) => setCooldown(Number(e.target.value))}
+                className={fieldClass}
               />
             </div>
 
             <div className="pt-2 space-y-4">
               <label className="flex items-center space-x-3 cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={blockBorrowed} 
-                  onChange={e => setBlockBorrowed(e.target.checked)}
-                  className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                <input
+                  type="checkbox"
+                  checked={blockBorrowed}
+                  onChange={(e) => setBlockBorrowed(e.target.checked)}
+                  className="w-6 h-6 rounded border-gray-300"
                 />
                 <span className="font-medium text-gray-700">{t("pact.blockBorrowedLabel")}</span>
               </label>
 
               <label className="flex items-center space-x-3 cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={blockEmergency} 
-                  onChange={e => setBlockEmergency(e.target.checked)}
-                  className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                <input
+                  type="checkbox"
+                  checked={blockEmergency}
+                  onChange={(e) => setBlockEmergency(e.target.checked)}
+                  className="w-6 h-6 rounded border-gray-300"
                 />
                 <span className="font-medium text-gray-700">{t("pact.blockEmergencyLabel")}</span>
               </label>
             </div>
           </div>
-          
+
           <div className="p-4 bg-gray-50 border-t border-gray-100">
-            <button 
-              onClick={handleSave}
+            <button
+              onClick={() => void handleSave()}
               className="w-full p-4 bg-gray-900 text-white rounded-xl font-bold shadow-md hover:bg-black transition-colors"
             >
               {t("pact.savePact")}
@@ -193,6 +194,13 @@ export default function PactPage() {
             </p>
           </div>
         </div>
+
+        <Link
+          href="/checkin"
+          className="block text-center p-4 bg-blue-600 text-white rounded-xl font-bold shadow-md hover:bg-blue-700"
+        >
+          {t("pact.toCheckin")}
+        </Link>
       </div>
     </div>
   );

@@ -1,82 +1,53 @@
 import { NextResponse, type NextRequest } from "next/server";
+
+import { getActiveConsentId } from "@/lib/auth/consent";
+import { isSameOrigin } from "@/lib/auth/origin";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { processSyncItem } from "@/lib/sync/process";
+import { syncRequestSchema } from "@/lib/validation/schemas";
 
-export async function POST(req: NextRequest) {
+const MAX_BODY_BYTES = 256 * 1024;
+
+export async function POST(request: NextRequest) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "forbidden_origin" }, { status: 403 });
+
+  const raw = await request.text();
+  if (raw.length > MAX_BODY_BYTES) return NextResponse.json({ error: "payload_too_large" }, { status: 413 });
+
+  let body: unknown;
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const body = await req.json();
-    const items = body.items || [];
-
-    const results = [];
-
-    for (const item of items) {
-      const { entityType, payload, id: idempotency_key } = item;
-      let error = null;
-
-      if (entityType === "pact") {
-        const { error: dbError } = await supabase.from("pacts").upsert({
-          user_id: user.id,
-          daily_loss_limit_paise: payload.dailyLossLimitPaise,
-          maximum_trades_per_day: payload.maximumTradesPerDay,
-          cooldown_after_loss_minutes: payload.cooldownAfterLossMinutes,
-          blocked_windows: payload.blockedWindows || [],
-          block_borrowed_funds: payload.blockBorrowedFunds ?? true,
-          block_emergency_funds: payload.blockEmergencyFunds ?? true,
-          revision: payload.revision,
-          effective_at: payload.effectiveAt || new Date().toISOString()
-        });
-        error = dbError;
-      } else if (entityType === "checkin") {
-        const { error: dbError } = await supabase.from("checkins").insert({
-          id: payload.id,
-          user_id: user.id,
-          occurred_at: payload.timestamp,
-          amount_paise: payload.amountPaise || 0,
-          fund_source: payload.fundSource || 'surplus',
-          borrow_kind: payload.borrowKind || 'none',
-          horizon: payload.horizon || 'intraday',
-          reason: payload.reason || 'Checkin',
-          exit_condition: payload.exitCondition || 'N/A',
-          idempotency_key: idempotency_key || payload.id
-        });
-        error = dbError;
-      } else if (entityType === "pause") {
-        const { error: dbError } = await supabase.from("pause_events").insert({
-          id: payload.id,
-          user_id: user.id,
-          assessment_id: payload.assessmentId,
-          tier: payload.tier,
-          started_at: payload.startedAt,
-          expires_at: payload.expiresAt,
-          outcome: payload.outcome || 'waiting',
-          idempotency_key: idempotency_key || payload.id
-        });
-        error = dbError;
-      } else if (entityType === "journal") {
-        const { error: dbError } = await supabase.from("journal_entries").insert({
-          id: payload.id,
-          user_id: user.id,
-          reason: payload.reason,
-          horizon: payload.horizon || 'intraday',
-          exit_condition: payload.exitCondition || 'N/A',
-          transcript_source: payload.transcriptSource || 'typed',
-          created_at: payload.createdAt,
-          idempotency_key: idempotency_key || payload.id
-        });
-        error = dbError;
-      }
-
-      results.push({ id: idempotency_key, status: error ? "failed" : "success", error: error?.message });
-    }
-
-    return NextResponse.json({ results });
-  } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    body = JSON.parse(raw);
+  } catch {
+    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
+  const parsed = syncRequestSchema.safeParse(body);
+  if (!parsed.success) return NextResponse.json({ error: "invalid_request" }, { status: 400 });
+
+  const userClient = await createClient();
+  const {
+    data: { user }
+  } = await userClient.auth.getUser();
+  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const [syncConsent, journalConsent] = await Promise.all([
+    getActiveConsentId(userClient, user.id, "sync"),
+    getActiveConsentId(userClient, user.id, "journal_sync")
+  ]);
+  if (!syncConsent) return NextResponse.json({ error: "consent_required", purpose: "sync" }, { status: 403 });
+
+  const context = {
+    userClient,
+    admin: createAdminClient(),
+    userId: user.id,
+    nowMs: Date.now(),
+    consents: { sync: true, journalSync: Boolean(journalConsent) }
+  };
+
+  // Sequential: a pause depends on the assessment written by its check-in.
+  const results = [];
+  for (const item of parsed.data.items) {
+    results.push(await processSyncItem(context, item));
+  }
+  return NextResponse.json({ results });
 }

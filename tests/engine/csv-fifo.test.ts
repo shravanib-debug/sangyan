@@ -16,9 +16,9 @@ describe("CSV Parser and FIFO Pairing", () => {
     expect(trade.quantity).toBe(100);
     expect(trade.pricePaise).toBe(250000);
     
-    // @ts-expect-error
+    // @ts-expect-error: PII columns are not part of the canonical Trade type
     expect(trade.Name).toBeUndefined();
-    // @ts-expect-error
+    // @ts-expect-error: PII columns are not part of the canonical Trade type
     expect(trade.Account).toBeUndefined();
   });
 
