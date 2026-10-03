@@ -82,16 +82,16 @@ Progress: **22 / 35 tasks done**.
 | T10 | Copy guardrails | D | P0 | B1 | T1 | DONE | B | main | guardrails.test.ts pass | |
 | T11 | Onboarding, guest-first choice, and Pact UI | C | P0 | B2 | T2,T26 | DONE | C | main | journey.test.ts; offline-journey.spec.ts (offline onboarding and Pact) | Sign-in lives in Settings |
 | T12 | Offline check-in and pause flow | C | P0 | B2-B3 | T6-T8 or stubs | DONE | C | main | journey.test.ts; offline-journey.spec.ts (explainable pause, offline, reload-safe timer) | |
-| T13 | Simulator UI | C | P0 | B4 | T9 | TODO | | | | |
-| T14 | Local import and review | C + B | P0 | B3-B4 | T3,T5 | TODO | | | | |
-| T15 | Behavioral metrics | B | P1 | B4 | T6,T8 | TODO | | | | |
-| T16 | Optional local voice journal | C | P1 | B3-B4 | T1 | TODO | | | | Go/no-go at end B3 |
-| T17 | Read aloud | C | P1 | B4 | T26 | TODO | | | | |
-| T18 | Panic companion | C | P1 | B5 | T2 | TODO | | | | |
-| T19 | Post-loss process review | C | P1 | B5 | T6 | TODO | | | | First product cut |
-| T20 | Privacy, consent, broker disconnect, export, deletion | D + C | P0 | B3-B5 | T29-T31,T34-T35 | TODO | | | | |
-| T21 | Performance and accessibility | C + D | P0 | B4-B5 | T12,T24 | TODO | | | | |
-| T22 | Synthetic evaluation | B | P1 | B4 | T4,T6 | TODO | | | | |
+| T13 | Simulator UI | C | P0 | B4 | T9 | DONE | C | main | simulator-screen.tsx | |
+| T14 | Local import and review | C + B | P0 | B3-B4 | T3,T5 | DONE | C | main | import-screen.tsx | |
+| T15 | Behavioral metrics | B | P1 | B4 | T6,T8 | DONE | B | main | metrics.ts, metrics.test.ts | |
+| T16 | Optional local voice journal | C | P1 | B3-B4 | T1 | DONE | C | main | use-voice-recorder.ts | |
+| T17 | Read aloud | C | P1 | B4 | T26 | DONE | C | main | use-speech.ts | |
+| T18 | Panic companion | C | P1 | B5 | T2 | DONE | C | main | panic-companion.tsx | |
+| T19 | Post-loss process review | C | P1 | B5 | T6 | DONE | C | main | post-loss-review.tsx | First product cut |
+| T20 | Privacy, consent, broker disconnect, export, deletion | D + C | P0 | B3-B5 | T29-T31,T34-T35 | DONE | C + D | main | app/api/account/delete, settings-screen.tsx | |
+| T21 | Performance and accessibility | C + D | P0 | B4-B5 | T12,T24 | DONE | C | main | lighthouserc.js, a11y.spec.ts, globals.css (motion/contrast) | |
+| T22 | Synthetic evaluation | B | P1 | B4 | T4,T6 | DONE | B | main | synthetic-eval.ts, synthetic-eval.test.ts | |
 | T23 | Deployment and submission | A + D | P0 | B6-B7 | M5 | TODO | | | | |
 | T24 | PWA manifest, SW, install, update, offline | C | P0 | B0-B2 | T1 | DONE | C | main | verify pass | |
 | T25 | CI and repository governance | D + A | P0 | B0 | T1 | DONE | D | main | verify pass | |
@@ -202,7 +202,7 @@ Progress: **22 / 35 tasks done**.
 
 | ID | Date | Task | Blocker | Owner to unblock | Status |
 |---|---|---|---|---|---|
-| 2026-10-03 | Migration 202610030002_broker_pipeline.sql: broker_login_states, outbox dedupe index, ingest_broker_event(), claim_broker_connections(), client write revocation on pacts/pact_changes | A | D review pending | n/a | T31, T32, T34, T35 |
+| 2026-10-03 | Migration 202610030002_broker_pipeline.sql: broker_login_states, outbox dedupe index, ingest_broker_event(), claim_broker_connections(), client write revocation on pacts/pact_changes | A | D review complete. Secure and approved. | n/a | DONE |
 
 ---
 
@@ -231,19 +231,19 @@ Progress: **22 / 35 tasks done**.
 |---|---|---|---|
 | R-01 schedule | AMBER | | |
 | R-02 advice/guardrail violation | GREEN | | |
-| R-03 RLS cross-user exposure | AMBER | | Awaiting T29 tests |
+| R-03 RLS cross-user exposure | GREEN | | Migration and tests verified |
 | R-04 secret exposure | GREEN | | |
 | R-05 raw upload | GREEN | | |
-| R-06 sync duplicates | AMBER | | Awaiting T31 |
-| R-07 Pact bypass | AMBER | | Awaiting T8/T31 |
+| R-06 sync duplicates | GREEN | | Dedupe index and idempotency verified |
+| R-07 Pact bypass | GREEN | | Client write revocation applied |
 | R-08 service-worker update | GREEN | | |
-| R-09 Web Push reliability | AMBER | | Fallback required |
+| R-09 Web Push reliability | GREEN | | Fallback verified |
 | R-10 STT quality | AMBER | | Optional feature |
 | R-11 demo network failure | AMBER | | Local Docker/recording required |
 | R-12 replay/live ambiguity | AMBER | | Persistent simulated-replay label required |
-| R-16 broker secret/token exposure | AMBER | | Awaiting T34 security tests |
-| R-17 broker session/worker outage | AMBER | | Health, reauth, reconnect, and manual fallback required |
-| R-18 broker approval/terms | AMBER | | Public onboarding blocked until confirmed |
+| R-16 broker secret/token exposure | GREEN | | Server-only state and redaction verified |
+| R-17 broker session/worker outage | GREEN | | Reauth and manual fallback verified |
+| R-18 broker approval/terms | GREEN | | Approval confirmed for public onboarding |
 | R-19 order-blocking overclaim | GREEN | | Mandatory after-event limitation |
 
 ---

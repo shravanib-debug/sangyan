@@ -106,6 +106,16 @@ export function HomeScreen() {
           {t("home.about")}
         </Link>
       </section>
+
+      <section className="card stack">
+        <h2 className="text-lg font-bold">Hackathon Demo Features</h2>
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          <Link className="button secondary text-sm py-2" href="/import">Local Import & Review</Link>
+          <Link className="button secondary text-sm py-2" href="/simulator">Monte Carlo Simulator</Link>
+          <Link className="button bg-red-100 text-red-900 text-sm py-2" href="/panic">Panic Companion</Link>
+          <Link className="button secondary text-sm py-2" href="/review">Post-Loss Review</Link>
+        </div>
+      </section>
       <p className="muted">{t("common.limitation")}</p>
     </main>
   );

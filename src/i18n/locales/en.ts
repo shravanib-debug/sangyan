@@ -144,6 +144,32 @@ export const en = {
       borrowed: "borrowed money"
     }
   },
+  simulator: {
+    title: "Consequence Simulator",
+    subtitle: "Illustrative simulation. This is not a forecast.",
+    principal: "Starting Capital (INR)",
+    leverage: "Leverage",
+    lossLimit: "Daily Loss Limit (INR)",
+    volatility: "Market Volatility",
+    simulate: "Run Simulation",
+    baselineRuin: "Wipeout risk (No rules)",
+    ruleBoundRuin: "Wipeout risk (With limits)",
+    disclaimer: "These figures are based on mathematical models using random walks. They do not predict actual market movements or your personal trading outcomes.",
+    recoveryTitle: "Recovery Required",
+    recoveryMath: "A {{loss}}% loss requires a {{gain}}% gain to break even.",
+    recoveryWipeout: "Wipeout (100% loss) cannot be recovered."
+  },
+  importHistory: {
+    title: "Import History",
+    subtitle: "See how Thehrav would have evaluated past trades. Processing happens entirely on your device.",
+    selectFile: "Select CSV File",
+    processing: "Processing...",
+    droppedNotice: "{{count}} rows could not be parsed and were skipped. Raw rejected data is never shown.",
+    flaggedTimeline: "Flagged Timeline",
+    replayDiffTitle: "Retrospective Difference",
+    replayDiffBody: "This shows theoretical pauses based on your rules. Thehrav cannot avoid losses, but it can introduce friction.",
+    noFlags: "No rules were breached in the imported dataset."
+  },
   settings: {
     title: "Settings",
     accountTitle: "Account",
@@ -193,7 +219,14 @@ export const en = {
     pushOn: "Notifications are on for this device.",
     pushUnsupported: "This browser does not support notifications.",
     pushDenied: "Notifications are blocked in your browser settings.",
-    pushNeedsSync: "Turn on sync first."
+    pushNeedsSync: "Turn on sync first.",
+    privacyTitle: "Privacy & Data",
+    privacyBody: "Manage your data. Raw CSV and audio never leave your device.",
+    exportData: "Export local data",
+    deleteLocal: "Delete local data",
+    deleteAccount: "Delete cloud account",
+    deleteLocalConfirm: "This will permanently delete all data from this device. Are you sure?",
+    deleteAccountConfirm: "This will permanently delete your cloud account and all synced data, and log you out. Are you sure?"
   },
   screens: {
     onboarding: "Onboarding",
