@@ -16,10 +16,12 @@
 | Product form | Installable Next.js PWA with offline capability, optional account/sync, and a Supabase backend |
 | Privacy position | Raw CSV and audio stay local by default; cloud sync is optional, purpose-specific, and consented |
 | Advice boundary | Never recommends, ranks, predicts, or places a trade |
-| MVP connected flow | Clearly labelled synthetic trade event demonstrates backend detection, outbox, and Web Push |
+| MVP connected flow | Consented, read-only Zerodha connection receives broker events and triggers detection, outbox, and Web Push; synthetic replay is test/fallback only |
 | Deliverables | Live PWA, 3-5 minute video, PPT, and one complete user journey |
 
 **Positioning:** investor-protection infrastructure, not a trading-productivity tool. Success means more considered decisions and better adherence to self-authored rules, not engagement or P&L.
+
+**USP:** Trading platforms help users execute faster; Thehrav uses consented broker activity to recognize a potentially impulsive follow-up decision and insert a private, explainable pause before more money is risked.
 
 ---
 
@@ -49,8 +51,8 @@ Build a speed bump, not a guru. The system mirrors the user's own rules and stat
 | Resilience and safety impact | Pact, pauses, money-source triage, process metrics, and transparent evaluation |
 | Tier-2/3 usability | Hindi/Marathi/English, large controls, offline flow, low-end performance, text fallback |
 | Guardrail compliance and trust | Deterministic explanations, RLS, consent, data minimisation, no advice |
-| Technical execution | Full-stack PWA, shared engine, worker computation, sync, synthetic events, Web Push |
-| Feasibility and scalability | PostgreSQL data model, event ingestion boundary, outbox, optional account and future adapters |
+| Technical execution | Full-stack PWA, shared engine, persistent broker worker, official read-only adapter, sync, and Web Push |
+| Feasibility and scalability | PostgreSQL data model, normalized provider boundary, outbox, connection lifecycle, and future Angel One adapter |
 
 ---
 
@@ -59,9 +61,9 @@ Build a speed bump, not a guru. The system mirrors the user's own rules and stat
 ### 2.1 Core loop
 
 ```text
-Learn risk without money
-        -> set rules while calm
-        -> check in before acting
+Install and set rules while calm
+        -> optionally connect Zerodha through broker-hosted login
+        -> broker activity or a manual check-in triggers evaluation
         -> declare whose money it is
         -> state reason and horizon
         -> receive an explainable pause
@@ -82,8 +84,9 @@ Learn risk without money
 9. Consequence Simulator using the user's amount and stated assumptions.
 10. Local CSV import that drops non-allowlisted columns and never uploads the raw file.
 11. Offline mutation queue with idempotent synchronization.
-12. Synthetic connected-event endpoint that demonstrates server verification, outbox processing, and generic Web Push.
-13. Export, consent revocation, local deletion, and cloud account deletion.
+12. Official Zerodha connection using broker-hosted login, encrypted short-lived tokens, read-only order/trade updates, and explicit disconnect.
+13. Persistent broker worker that normalizes and deduplicates events, runs server verification, writes an outbox event, and triggers generic Web Push.
+14. Export, consent revocation, local deletion, and cloud account deletion.
 
 ### 2.3 Stretch scope
 
@@ -92,12 +95,13 @@ Learn risk without money
 - Weekly behavioral review.
 - Guardian share message initiated by the user.
 - Additional Indian languages.
-- A reviewed pilot adapter for an official, consented event source.
+- Angel One SmartAPI adapter behind the same read-only provider contract.
 
 ### 2.4 Explicitly out of scope
 
 - Stock tips, buy/sell/hold recommendations, targets, predictions, or algorithms.
 - Trade placement, order routing, or claims that the MVP blocks an unrelated broker app.
+- Asking users to paste a broker password, PIN, TOTP, API secret, request token, or access token into Thehrav.
 - Broker credential scraping, SMS/OTP reading, contact uploads, or screen overlays.
 - Margin, loan, broker, or instrument promotion.
 - Payments, referrals, advertisements, subscriptions, or lead generation.
@@ -107,7 +111,7 @@ Learn risk without money
 
 ### 2.5 Honest limitation
 
-The MVP can pause a user who voluntarily checks in and can react to a synthetic connected event. It cannot observe or block a real order in a third-party broker app without a future official integration. This limitation must appear in the product and pitch.
+With explicit consent and a valid Zerodha session, the MVP can observe official order/trade updates and react quickly. Updates arrive after broker activity: Thehrav cannot stop the order it observed, block a later order inside Zerodha, or guarantee notification delivery before another action. If the session, worker, network, or push channel is unavailable, manual/offline check-in remains available and the UI must show that live monitoring is stale.
 
 ---
 
@@ -117,6 +121,7 @@ The MVP can pause a user who voluntarily checks in and can react to a synthetic 
 |---|---|---|
 | No advice or prediction | No output recommends, ranks, predicts, or promotes an instrument | Copy linter, refusal rules, snapshots |
 | No order placement | Event ingestion is read-only behavior context; no trading endpoint exists | Route allowlist and architecture tests |
+| Broker credential safety | Hosted broker login; secrets and encrypted access tokens remain server-side and are deleted on disconnect | Callback, secret-scan, encryption, redaction, and deletion tests |
 | Privacy by design | Raw files/audio local; synced fields minimised and consented | Network, schema, consent, and log-redaction tests |
 | Account optional | Guest users complete the core journey offline | Offline E2E |
 | Secure cloud data | Grants and RLS on every exposed user table | Supabase DB allow/deny tests |
@@ -138,7 +143,7 @@ The MVP can pause a user who voluntarily checks in and can react to a synthetic 
 | F5 | Friction Ladder | L0 information, L1 breath, L2 reflection, L3 prior-Pact lock | P0 |
 | F6 | Consequence Simulator | Recovery asymmetry, leverage, fee drag, illustrative cohort | P0 |
 | F7 | Optional account and sync | Cross-device recovery, server-authoritative Pact, consent controls | P0 |
-| F8 | Synthetic connected event | Demonstrates server verification, outbox, and generic push | P0 |
+| F8 | Zerodha connection and live event detection | Read-only official event updates trigger server verification, outbox, and generic push | P0 |
 | F9 | Behavioral review | PHR, II, JC, RA, BRS, retrospective replay difference | P1 |
 | F10 | Panic companion | One-tap guided pause and factual context | P1 |
 
@@ -155,6 +160,7 @@ The MVP can pause a user who voluntarily checks in and can react to a synthetic 
 | 3 | Chooses guest or sign-in | Guest continues immediately; sign-in uses Supabase Auth |
 | 4 | Tries simulator | Runs locally with visible assumptions |
 | 5 | Creates Pact | Persists locally and syncs if enabled |
+| 6 | Optionally connects Zerodha | Reads consent, leaves for broker-hosted login, and returns with connection health visible |
 
 ### 5.2 Pre-decision check-in
 
@@ -176,16 +182,19 @@ The MVP can pause a user who voluntarily checks in and can react to a synthetic 
 4. Signals and the flagged timeline run locally.
 5. The raw file is discarded and never uploaded by default.
 
-### 5.4 Synthetic connected event
+### 5.4 Zerodha-connected intervention
 
-1. The demo sends a signed synthetic event to `POST /api/trade-events`.
-2. The server validates and deduplicates it.
-3. The server loads the authoritative Pact and recent consented history.
-4. The shared engine produces a risk assessment.
-5. Assessment, pause, and outbox event commit atomically.
-6. The server wakes an Edge Function after commit; Supabase Cron retries any undispatched row.
-7. The Edge Function sends a generic Web Push.
-8. Opening the notification loads protected details and starts the PWA pause flow.
+1. A signed-in user grants broker-monitoring consent and selects Connect Zerodha.
+2. Thehrav redirects to Zerodha's hosted login; broker credentials never enter Thehrav.
+3. The callback validates signed single-use state and exchanges the one-time request token on the server.
+4. The access token is encrypted and assigned to the persistent broker worker; the UI shows session health and expiry.
+5. A read-only order/trade update is normalized and deduplicated; reconnects use REST reconciliation to close gaps.
+6. The server loads the authoritative Pact and recent consented history, then runs the shared engine.
+7. Canonical event, assessment, pause, and outbox event commit atomically.
+8. An Edge Function sends a generic Web Push; opening it loads protected details and starts the journal/cooling-off flow.
+9. Disconnect revokes consent, stops monitoring, and deletes the stored token. Expiry changes the state to `reauth_required`.
+
+Automated tests and the recorded fallback replay synthetic events through the same canonical boundary and label them as simulated. They are not presented as a live broker integration.
 
 ---
 
@@ -199,6 +208,8 @@ The normative implementation is in `ARCHITECTURE.md`. Required characteristics a
 - Shared deterministic TypeScript engine on client and server.
 - Next.js Route Handlers for API boundaries.
 - Supabase Cron and Edge Functions for outbox delivery.
+- Persistent Dockerized Node worker for broker WebSockets and reconciliation.
+- Official Zerodha SDK behind a read-only adapter; Angel One is a later provider.
 - Docker-backed local Supabase through the Supabase CLI.
 - Vercel deployment for Next.js and managed Supabase in production.
 
@@ -435,7 +446,9 @@ Fixtures cover calm, revenge, overtrading, loss aversion, loan funded, and late-
 
 ### 9.3 Connected events
 
-The MVP connected endpoint accepts synthetic events only. A real adapter requires a separate architecture/security review, explicit consent, documented retention, official API terms, and an updated limitation statement.
+The MVP uses a Zerodha-first, read-only provider adapter. The platform owns the registered app API key/secret in server-side environment configuration; each user authenticates through the broker-hosted flow and grants purpose-specific consent. Access material is encrypted, short-lived, never exported, and deleted on disconnect. Canonical events retain only fields required for behavioral detection and use provider IDs plus a dedupe hash. Public or multi-user launch is conditional on the applicable broker approval and terms review.
+
+Synthetic personas remain the only committed fixtures and automated-test inputs. Sandbox or replay mode must be visibly labelled. Angel One may be added only through the same adapter contract and a separate provider-specific security/terms review.
 
 ### 9.4 Evaluation
 
@@ -449,6 +462,10 @@ Run 500 synthetic traders per persona with assumed pause-compliance probabilitie
 |---|---|
 | Cross-user access | Grants, RLS, owner/non-owner tests |
 | Service credential exposure | Server-only modules and bundle secret scan |
+| Broker token theft | Broker-hosted login, signed state, single-use callback, authenticated encryption, short retention, rotation, no token export |
+| Unauthorized trading | Read-only adapter interface and route/egress allowlist contain no place/modify/cancel methods |
+| Stale monitoring | Connection heartbeat and expiry shown in UI; fail closed to `reauth_required`; manual flow remains available |
+| Reconnect gaps/duplicates | Lease ownership, exponential reconnect, REST reconciliation, provider ID/dedupe uniqueness |
 | Data exfiltration | Endpoint allowlist, consent-purpose check, raw upload denial |
 | Duplicate offline mutations | Client UUID, idempotency key, server unique constraint |
 | Multi-device Pact bypass | Server-authoritative revision and stricter merge |
@@ -470,6 +487,7 @@ Run 500 synthetic traders per persona with assumed pause-compliance probabilitie
 - Never use color alone.
 - Respect reduced motion.
 - Explain local mode, optional sync, and connection status calmly.
+- Display `live`, `reconnecting`, `stale`, `reauth required`, and `disconnected` broker states without implying guaranteed protection.
 - Provide text fallback for every voice interaction.
 - Show no raw risk detail in a push notification.
 - Use calm, plain, non-judgmental copy: “your rule says” and “you told us,” not “you should.”
@@ -481,18 +499,18 @@ Run 500 synthetic traders per persona with assumed pause-compliance probabilitie
 | Scene | Demonstrates |
 |---|---|
 | 1 | Ramesh and the behavioral problem |
-| 2 | Marathi/ Hindi onboarding and privacy choice |
-| 3 | Simulator with INR 10,000 and visible assumptions |
-| 4 | Pact creation and delayed loosening |
-| 5 | Local check-in funded by an instant loan |
-| 6 | Explainable revenge/source/breach signals and L2 reflection |
-| 7 | Offline outcome stored, then synced after reconnection |
-| 8 | Signed synthetic event enters the Next.js API and produces an outbox event |
-| 9 | Generic Web Push opens the protected pause flow |
-| 10 | Review shows process metrics and retrospective replay caveats |
-| 11 | Close with no-advice boundary, RLS, data controls, and integration limitation |
+| 2 | Marathi/Hindi onboarding, privacy choice, and a self-authored Pact |
+| 3 | User connects Zerodha through the broker-hosted login; no broker secret enters the PWA |
+| 4 | Connection health is live; a consented sandbox/live order update reaches the worker |
+| 5 | Loss/frequency/Pact signals create an assessment and transactional outbox event |
+| 6 | Generic Web Push opens the protected explanation and money-source check |
+| 7 | User identifies instant-loan funding, writes a short reason and horizon, and receives a cooling-off pause |
+| 8 | User abandons the revenge trade; the outcome queues offline and syncs later |
+| 9 | Weekly review shows process metrics and retrospective replay caveats |
+| 10 | Disconnect deletes access material and stops monitoring |
+| 11 | Close with no-advice/no-order boundary and the honest after-event limitation |
 
-The demo must work without the network for the core journey. The connected-event segment may use the local Docker-backed Supabase environment or staging and must have a recorded fallback.
+The manual core journey must work offline after first load. The connected segment requires network, an active broker/sandbox session, the persistent worker, Supabase, and push permission. It must have a clearly labelled deterministic replay and recorded fallback.
 
 ---
 
@@ -510,8 +528,10 @@ Detailed cards live in `TASKS.md`.
 | T29 | Supabase schema, migrations, grants, RLS, seed |
 | T30 | Supabase Auth and guest-to-account flow |
 | T31 | Route Handlers, offline sync, idempotency, conflict resolution |
-| T32 | Synthetic event ingestion, outbox, Edge Function, Web Push |
+| T32 | Canonical broker-event pipeline, outbox, Edge Function, Web Push |
 | T33 | Dockerfile and local/CI environment verification |
+| T34 | Zerodha connect/callback/status/disconnect lifecycle and token protection |
+| T35 | Persistent broker worker, read-only adapter, normalization, reconnect, and reconciliation |
 
 ---
 
@@ -524,7 +544,8 @@ Detailed cards live in `TASKS.md`.
 - Supabase migrations, grants, constraints, and RLS allow/deny tests.
 - Offline queue, reconnection, duplicate delivery, and conflict tests.
 - Privacy tests for PII drop, raw-upload denial, consent gating, and log redaction.
-- Playwright PWA tests for online, offline, update deferral, account sync, and synthetic event flow.
+- Playwright PWA tests for online, offline, update deferral, account sync, and replayed/sandbox broker flow.
+- Broker contract tests for callback replay, token encryption/redaction, no-order API surface, reconnect, reconciliation, dedupe, and disconnect.
 - Lighthouse, bundle, worker, and API performance checks.
 
 ---
@@ -533,6 +554,7 @@ Detailed cards live in `TASKS.md`.
 
 - Vercel deploys the Next.js PWA and Route Handlers.
 - Managed Supabase provides PostgreSQL, Auth, RLS, Cron, and Edge Functions.
+- A persistent container service runs the broker worker; serverless/Edge functions do not hold broker WebSockets.
 - Supabase migrations are reviewed and applied as a release step.
 - Local backend development uses `supabase start`, which requires Docker.
 - A multi-stage Dockerfile produces a standalone Next.js image for CI and portable deployment, but Vercel does not require that image.
@@ -547,9 +569,10 @@ Detailed cards live in `TASKS.md`.
 - [ ] Every exposed user table has tested grants and RLS.
 - [ ] Tightening and multi-device delayed loosening behave correctly.
 - [ ] Raw CSV and audio do not leave the device by default.
-- [ ] Synthetic connected event produces a verified assessment, outbox row, and generic push.
+- [ ] Zerodha hosted login, encrypted token lifecycle, read-only event ingestion, disconnect, and daily reauthentication work.
+- [ ] A sandbox/live or labelled replay event produces one verified assessment, one outbox event, and one logical generic push.
 - [ ] No tips, predictions, order placement, broker promotion, or monetisation.
 - [ ] Export, consent revocation, local delete, and cloud account delete work.
 - [ ] CI, offline E2E, full-stack E2E, accessibility, and guardrail gates pass.
 - [ ] Live URL, video, PPT, and recorded fallback are ready.
-- [ ] The broker-blocking limitation and synthetic-data limitations are stated plainly.
+- [ ] The after-event timing, no-blocking guarantee, session freshness, and synthetic-fallback labels are stated plainly.

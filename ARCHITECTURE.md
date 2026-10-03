@@ -19,15 +19,16 @@
 | Offline | App shell and core journey work offline; IndexedDB stores the local working set and sync queue |
 | Risk computation | Shared, deterministic TypeScript engine runs locally and is re-run or verified on the server for synced decisions |
 | Data minimisation | Raw CSV and raw journal audio stay on-device by default; only consented canonical records sync |
-| Background work | An Edge Function dispatches PostgreSQL outbox events after commit; Supabase Cron retries undispatched rows and Web Push delivery |
-| Hosting | Vercel for Next.js; managed Supabase for Postgres/Auth/Realtime/Functions |
+| Broker integration | Zerodha Kite Connect first, using broker-hosted login and read-only order/trade updates; Angel One remains a later adapter |
+| Background work | A persistent Dockerized Node broker worker maintains broker WebSockets; an Edge Function dispatches PostgreSQL outbox events and Cron retries delivery |
+| Hosting | Vercel for Next.js; managed Supabase; a persistent container host for the broker worker |
 | Local infrastructure | Supabase CLI using Docker; Next.js may run on the host or through its production Dockerfile |
 | AI | Optional and off by default; core behavior is deterministic and explainable |
 | Languages | English, Hindi, Marathi, with an extensible namespaced translation system |
 
-**One-sentence architecture:** Thehrav is a full-stack, local-first Next.js PWA backed by Supabase; it evaluates risk immediately on-device, securely verifies and synchronizes consented records through server routes, and uses RLS, an outbox, scheduled functions, and Web Push for cross-device continuity and timely interventions.
+**One-sentence architecture:** Thehrav is a full-stack, local-first Next.js PWA backed by Supabase; with explicit consent it receives read-only Zerodha events through a persistent worker, evaluates behavioral risk with a shared deterministic engine, and delivers a timely, explainable cooling-off prompt through Web Push.
 
-The PWA is useful without an account or connection. The backend adds synchronization, recovery, push delivery, consent records, and an event-ingestion path; it is not a reason to upload raw financial files by default.
+The PWA remains useful without a broker connection. Live detection requires a signed-in account, an active broker session, push permission, and explicit consent. Thehrav never places, modifies, cancels, or blocks an order.
 
 ---
 
@@ -53,6 +54,11 @@ The PWA is useful without an account or connection. The backend adds synchroniza
 | I16 | Service-role credentials MUST never be included in the browser bundle. | Environment scan + build test |
 | I17 | Sync mutations MUST be idempotent and use client-generated IDs, revision numbers, and idempotency keys. | API integration tests |
 | I18 | Background delivery MUST use an outbox; a database commit MUST NOT depend on a best-effort push call. | Integration test |
+| I19 | Broker secrets, request tokens, access tokens, and encryption keys MUST remain server-side, encrypted at rest where stored, and redacted from logs. | Secret scan + log-redaction + database tests |
+| I20 | Broker adapters MUST expose observation methods only. Place, modify, cancel, basket, GTT, and funds-transfer operations MUST NOT exist in the adapter interface or route allowlist. | Type-level contract + architecture tests |
+| I21 | Only the broker callback may exchange a short-lived request token. State/nonce, authenticated ownership, consent, and exact redirect validation are mandatory. | Route and replay tests |
+| I22 | A broker disconnect MUST stop the worker session, revoke/delete stored access material, and stop new event ingestion and push triggers. | Integration and deletion tests |
+| I23 | The product MUST state that detection follows broker events and cannot block an order placed in the broker's own app. | Copy snapshots + release checklist |
 
 ---
 
@@ -84,6 +90,15 @@ flowchart TB
     AUTHZ --> SENG
   end
 
+  subgraph BrokerRuntime[Persistent container runtime]
+    BW[Broker worker]
+    AD[Read-only Zerodha adapter]
+    BW --> AD
+  end
+
+  Z[Zerodha Kite Connect]
+  AD <-->|broker WebSocket + REST reconciliation| Z
+
   subgraph Supabase[Supabase]
     AUTH[Auth]
     PG[(PostgreSQL + RLS)]
@@ -99,6 +114,8 @@ flowchart TB
   APP -->|authenticated HTTPS when online| RH
   AUTHZ --> AUTH
   AUTHZ --> PG
+  RH -->|connect/callback/disconnect| Z
+  PG <-->|claim connections; write canonical events| BW
   PG --> OUT
   PUSH -. notification .-> SW
 ```
@@ -108,6 +125,7 @@ Layering direction:
 ```text
 UI -> application services -> engine/local storage/API client
 Route Handler -> validation/auth/consent -> engine -> repository -> PostgreSQL
+Broker WebSocket -> persistent worker -> canonical event transaction -> outbox -> Web Push
 Edge Function -> outbox consumer -> Web Push
 ```
 
@@ -131,7 +149,11 @@ thehrav/
 |   |   |-- checkins/route.ts
 |   |   |-- pacts/route.ts
 |   |   |-- journals/route.ts
-|   |   |-- trade-events/route.ts
+|   |   |-- brokers/zerodha/connect/route.ts
+|   |   |-- brokers/zerodha/callback/route.ts
+|   |   |-- brokers/zerodha/status/route.ts
+|   |   |-- brokers/zerodha/disconnect/route.ts
+|   |   |-- internal/broker-events/route.ts
 |   |   |-- push/subscriptions/route.ts
 |   |   `-- account/delete/route.ts
 |   |-- layout.tsx
@@ -167,6 +189,8 @@ thehrav/
 |   |-- tests/
 |   `-- functions/
 |       `-- dispatch-outbox/
+|-- apps/
+|   `-- broker-worker/    # persistent Node process; read-only broker adapters
 |-- tools/synth/
 |-- fixtures/
 |-- tests/{arch,api,db,e2e,engine,guardrails,privacy,sync}/
@@ -206,6 +230,9 @@ The repository root is authoritative. These five planning documents remain at th
 | Charts | Small SVG/canvas charts; lazy Recharts only where needed | Protect initial bundle |
 | PWA | Next manifest + custom Workbox service worker | Prompted updates; never reload during a pause |
 | Background work | Edge Function dispatcher + Supabase Cron retry + outbox | Low-latency best effort with durable recovery |
+| Broker SDK | Official `kiteconnect` TypeScript/JavaScript client behind a narrow adapter | Zerodha first; pin and wrap the SDK |
+| Broker listener | Persistent Node.js worker in Docker | Required because serverless/Edge runtimes cannot hold an all-day WebSocket |
+| Token protection | Application-layer authenticated encryption; managed KMS before broad production | Encryption key is never stored in PostgreSQL or exposed to the browser |
 | Testing | Vitest, Testing Library, fast-check, Playwright, axe, Supabase DB tests | Unit through full-stack E2E |
 | Local backend | Supabase CLI + Docker | Do not manually reproduce the Supabase stack in Compose |
 
@@ -284,6 +311,7 @@ The engine runs in three contexts:
 | `metricsService` | Compute local behavioral metrics |
 | `syncService` | Push/pull batches, retry idempotently, surface conflicts |
 | `pushService` | Request permission and register/remove a push subscription |
+| `brokerConnectionService` | Start broker login, show session freshness, and disconnect; never handles the API secret or access token |
 | `dataService` | Local/cloud export and scoped delete operations |
 
 ### Server routes
@@ -295,7 +323,11 @@ Every route performs authentication where required, Zod validation, consent/purp
 | `POST /api/sync` | Batch idempotent local changes and return authoritative revisions |
 | `POST /api/checkins` | Create/verify a check-in and risk assessment |
 | `PATCH /api/pacts/:id` | Apply tighten/loosen rules server-side |
-| `POST /api/trade-events` | Receive consented canonical or synthetic events; never place orders |
+| `GET /api/brokers/zerodha/connect` | Create signed state and redirect the authenticated user to Zerodha's hosted login |
+| `GET /api/brokers/zerodha/callback` | Validate state, exchange the one-time request token server-side, encrypt access material, and activate the connection |
+| `GET /api/brokers/zerodha/status` | Return provider, connection health, and expiry only; never return credentials |
+| `POST /api/brokers/zerodha/disconnect` | Revoke consent, stop the worker lease, and delete stored access material |
+| `POST /api/internal/broker-events` | Optional worker-to-app boundary protected by workload identity/signature; accepts canonical events only |
 | `POST /api/journals` | Sync text transcript only when enabled |
 | `POST/DELETE /api/push/subscriptions` | Register or revoke a device subscription |
 | `GET /api/export` | Export the authenticated user's cloud records |
@@ -335,17 +367,20 @@ sequenceDiagram
   end
 ```
 
-### 9.2 Connected or synthetic event
+### 9.2 Live Zerodha event and intervention
 
 ```text
-Consented event source -> POST /api/trade-events -> validate/dedupe
+User -> Thehrav connect route -> Zerodha-hosted login -> callback validates state
+-> server exchanges request token and stores encrypted access material
+-> persistent worker claims the active connection and maintains the order WebSocket
+-> worker normalizes and deduplicates order/trade updates, with REST reconciliation after reconnect
 -> load effective Pact and recent canonical history -> shared engine
--> persist assessment + pause + outbox in one transaction
--> wake Edge Function after commit; Cron retries any undispatched row
--> Edge Function dispatches Web Push -> PWA opens pause/journal flow
+-> persist canonical event + assessment + pause + outbox in one transaction
+-> Edge Function dispatches generic Web Push; Cron retries undispatched rows
+-> authenticated PWA opens the explanation, journal, and cooling-off flow
 ```
 
-For the hackathon, the event source is explicitly synthetic. A future broker adapter may supply events after legal, security, consent, and API review. The product never claims to block orders in an unrelated broker app.
+The MVP provider is Zerodha. Development uses the official sandbox where available and deterministic synthetic fixtures for automated tests and the recorded demo fallback. A live demo is enabled only with approved app credentials and a consenting test account. Broker events arrive after an order/trade update; therefore Thehrav can interrupt the likely next decision but cannot block the event it just observed or any order placed in the broker app.
 
 ### 9.3 Pact conflict resolution
 
@@ -380,10 +415,11 @@ For the hackathon, the event source is explicitly synthetic. A future broker ada
 | `profiles` | `user_id` PK; minimum profile data |
 | `devices` | user-owned device and locale metadata |
 | `consents` | purpose, policy version, granted/revoked timestamps |
+| `broker_connections` | user/provider identity, encrypted access material, expiry, health, lease, consent reference; never exposed directly to clients |
 | `pacts` | authoritative effective Pact and revision |
 | `pact_changes` | requested change, classification, `effective_at` |
 | `checkins` | canonical consented check-in fields |
-| `trade_events` | canonical minimal events; source and retention metadata |
+| `trade_events` | canonical minimal broker/import events; provider event ID, source, dedupe hash, and retention metadata |
 | `risk_assessments` | engine/config version, result and explanation JSON |
 | `pause_events` | tier, duration, outcome; no engagement gamification |
 | `journal_entries` | transcript only when journal sync is enabled |
@@ -398,7 +434,8 @@ RLS owner policy is necessary but not sufficient: grants are restricted per oper
 | Class | Examples | Default |
 |---|---|---|
 | Local-only sensitive | Raw CSV, raw audio, rejected CSV cells | Never uploaded |
-| Optional sync sensitive | Journal transcript, canonical trade events | Off until explicit consent |
+| Connected sensitive | Encrypted broker access material and canonical broker events | Explicit broker consent; shortest practical retention |
+| Optional sync sensitive | Journal transcript and imported canonical trade events | Off until explicit consent |
 | Sync operational | Pact, pause outcome, device subscription | Enabled only for signed-in sync users |
 | Public application data | Locale bundles, synthetic fixtures, cited index snapshot | Cacheable |
 
@@ -479,7 +516,10 @@ Public and auth routes may use Server Components. Routes that depend on IndexedD
 |---|---|
 | Authentication | Supabase Auth; secure server-readable session cookies following the supported SSR pattern |
 | Authorization | Route authorization plus PostgreSQL grants and RLS |
-| Secrets | Server/Edge environment only; service role and VAPID private key never reach client code |
+| Secrets | Server/worker environment only; broker API secret, token-encryption key, service role, and VAPID private key never reach client code |
+| Broker login | Broker-hosted login, signed single-use state/nonce, exact callback allowlist, server-side token exchange |
+| Broker tokens | Encrypted before persistence, decrypted only in the worker/backend, never returned by status/export routes, deleted on disconnect |
+| Read-only boundary | Narrow adapter omits every order mutation; egress and route allowlists deny accidental trading operations |
 | Validation | Zod at every HTTP and sync boundary; PostgreSQL constraints remain authoritative |
 | CSRF | SameSite cookies, origin checks, and framework-supported mutation protections |
 | Abuse control | Per-user/IP rate limits on auth, event ingestion, push registration, and exports |
@@ -505,6 +545,7 @@ The public Supabase publishable key is allowed in the client. The service-role k
 | Monte Carlo 1,000 x 250 | <= 300 ms in worker on agreed phone profile |
 | Check-in API p95 | <= 500 ms excluding cold start; UI never waits to show local result |
 | Sync | Retry with exponential backoff; idempotent duplicate delivery |
+| Broker event latency | Display observed-at, received-at, and connection health; never promise prevention or zero-latency blocking |
 
 The local result is immediate. Network verification updates sync state but does not block the reflection flow.
 
@@ -517,6 +558,9 @@ The local result is immediate. Network verification updates sync state but does 
 | Offline | Complete local journey; queue consented mutations |
 | Supabase unavailable | Keep local mode; show calm sync status; retry later |
 | Session expired | Preserve local work; request sign-in before cloud sync |
+| Broker session expired | Mark connection `reauth_required`, stop ingesting, and prompt the user to reconnect through broker login |
+| Broker WebSocket disconnect | Exponential reconnect, lease-safe resubscription, REST reconciliation, and idempotent deduplication |
+| Worker unavailable | Show stale connection state; preserve manual/offline check-in; alert operators without claiming live protection |
 | Sync conflict | Apply documented merge; stricter Pact wins; surface conflict status |
 | IndexedDB unavailable | In-memory session with visible non-persistence warning |
 | Worker crash | Bounded main-thread fallback or retry |
@@ -539,7 +583,8 @@ The local result is immediate. Network verification updates sync state but does 
 | Sync | Offline queue, duplicate delivery, revisions, stricter-Pact conflict resolution |
 | Privacy | PII drop, raw-file non-upload, consent gating, log redaction, delete/export |
 | PWA E2E | Installability, offline journey, update deferral, queued sync |
-| Full-stack E2E | Sign in, sync, cross-device Pact, synthetic event, outbox, push stub |
+| Broker contract | Login state/replay, token encryption/redaction, read-only adapter surface, normalization, reconnect, dedupe, disconnect |
+| Full-stack E2E | Sign in, sync, cross-device Pact, sandbox/replayed broker event, outbox, push stub |
 | Performance | Bundle, Lighthouse, worker budgets, API timing |
 
 CI order:
@@ -550,7 +595,7 @@ install -> typecheck -> lint -> unit -> architecture -> guardrails
 -> build -> bundle check -> E2E online/offline -> Lighthouse
 ```
 
-Only synthetic data is used in tests and demos.
+Only synthetic data is committed to the repository or used in automated tests. Live broker credentials and real financial payloads are never recorded in fixtures, screenshots, logs, or documentation.
 
 ---
 
@@ -563,11 +608,12 @@ Local development:
 ```bash
 supabase start
 pnpm dev
+pnpm broker:dev
 ```
 
-`supabase start` uses Docker for local PostgreSQL, Auth, Realtime, Storage, and Edge Functions. Next.js normally runs on the host for fast refresh.
+`supabase start` uses Docker for local PostgreSQL, Auth, Realtime, Storage, and Edge Functions. Next.js normally runs on the host for fast refresh. The broker worker runs as a separate process or Docker container and uses a fake/replay adapter unless an explicitly configured sandbox session is active.
 
-The root multi-stage `Dockerfile` builds a Next.js standalone production image:
+The root multi-stage `Dockerfile` builds a Next.js standalone production image. `apps/broker-worker/Dockerfile` builds the persistent worker image:
 
 ```text
 base -> dependencies -> build -> minimal non-root runner
@@ -579,9 +625,9 @@ Environments:
 
 | Environment | Next.js | Supabase | Data |
 |---|---|---|---|
-| Local | host `pnpm dev` or Docker | Supabase CLI/Docker | synthetic seed only |
-| Preview | Vercel preview | isolated preview/staging project | synthetic only |
-| Production | Vercel | production project | consented user data |
+| Local | host `pnpm dev` or Docker | Supabase CLI/Docker | replay adapter; optional broker sandbox |
+| Preview | Vercel preview | isolated preview/staging project | broker sandbox/replay; no production tokens |
+| Production | Vercel + persistent broker-worker container | production project | consented user data and encrypted short-lived broker tokens |
 
 ---
 
@@ -601,20 +647,23 @@ Environments:
 | `pnpm supabase:start` | Start local Supabase through Docker |
 | `pnpm supabase:reset` | Reapply migrations and synthetic seed locally |
 | `pnpm docker:build` | Build the standalone Next.js image |
+| `pnpm broker:dev` | Run the worker with replay or sandbox adapter |
+| `pnpm broker:test` | Run adapter, reconnect, dedupe, and no-order-surface tests |
+| `pnpm broker:docker:build` | Build the persistent broker-worker image |
 
-Vercel deploys the Next.js application. Supabase migrations are applied through a reviewed CI release step, never implicitly by a browser deployment.
+Vercel deploys the Next.js application. A persistent container platform deploys the broker worker. Supabase migrations are applied through a reviewed CI release step, never implicitly by a browser deployment.
 
 ---
 
-## 21. Scope boundary for a real circuit breaker
+## 21. Scope boundary for the circuit breaker
 
 The current MVP can intervene in three ways:
 
 1. A user voluntarily starts a check-in.
 2. A local imported history informs the next check-in.
-3. A synthetic server event demonstrates the connected workflow.
+3. With consent and a valid session, a Zerodha event triggers an automatic assessment and timely notification.
 
-A true transaction-level circuit breaker requires a consented, authorized event source such as an official broker API or partner integration. That integration is post-MVP and must not place trades, provide advice, scrape accounts, read SMS/OTP, or claim to block activity in unrelated apps.
+This is a behavioral circuit breaker, not an exchange or broker risk control. Thehrav receives updates after broker activity, so it cannot stop the observed order or guarantee interception before another order. It improves the chance of reflection through rapid detection, a generic push, and a protected cooling-off flow. It must not place trades, provide advice, scrape accounts, read SMS/OTP, or claim control over Zerodha.
 
 ---
 
@@ -623,7 +672,7 @@ A true transaction-level circuit breaker requires a consented, authorized event 
 | ID | Decision | Rationale | Consequence |
 |---|---|---|---|
 | ADR-1 | Full-stack, local-first PWA | Enables offline resilience plus sync, push, recovery, and connected events | More security and data-lifecycle work than static-only |
-| ADR-2 | Next.js App Router for web and backend | One TypeScript stack and deployment surface; no separate NestJS service | Long jobs move to Supabase functions/outbox |
+| ADR-2 | Next.js App Router for web and backend | One TypeScript application surface; no separate NestJS API | Long-lived broker sockets run in a separate worker process |
 | ADR-3 | Supabase PostgreSQL/Auth/RLS | Managed relational backend with authorization close to data | RLS and grants require explicit tests |
 | ADR-4 | Guest mode plus optional account | Low-friction Bharat-first onboarding without giving up sync | Local and cloud lifecycle must both be supported |
 | ADR-5 | Shared deterministic engine | Same explainable decision logic offline and server-side | Engine boundaries must remain pure and serialisable |
@@ -633,7 +682,9 @@ A true transaction-level circuit breaker requires a consented, authorized event 
 | ADR-9 | Custom Workbox service worker | Full control over offline shell, update deferral, and sync queue | Requires dedicated E2E coverage |
 | ADR-10 | Supabase CLI Docker locally | Reproducible backend without manually cloning managed infrastructure | Docker Desktop/Engine is a contributor prerequisite for full integration tests |
 | ADR-11 | No LLM in MVP | Protects privacy, determinism, guardrails, cost, and schedule | Voice/text structure uses deterministic forms |
-| ADR-12 | Synthetic connected-event demo | Demonstrates full-stack flow honestly before partner integration | UI and pitch must label the source as simulated |
+| ADR-12 | Zerodha-first official read-only integration | Order WebSocket updates cover broker activity without credential scraping | Requires daily session renewal, consent, encryption, and provider approval/terms review |
+| ADR-13 | Persistent Dockerized broker worker | Live WebSockets outlive serverless request limits | Adds a separately deployed and monitored runtime |
+| ADR-14 | Synthetic replay remains test/fallback only | Keeps tests deterministic and the demo recoverable | Any replayed event must be visibly labelled simulated |
 
 ---
 
@@ -649,5 +700,7 @@ A true transaction-level circuit breaker requires a consented, authorized event 
 | Outbox | Database table recording background work in the same transaction as domain changes |
 | RLS | PostgreSQL Row-Level Security restricting rows by authenticated user |
 | Sync revision | Monotonic version used for idempotency and conflict handling |
-| Synthetic event | Clearly labelled demo event, not a real broker integration |
+| Broker connection | Consented, revocable link to an official broker API; never authority to trade |
+| Broker worker | Persistent server process that listens for read-only events, normalizes them, and invokes the risk pipeline |
+| Synthetic event | Clearly labelled test or fallback event; not presented as live broker activity |
 | BRS | Behavioral Resilience Score based on process, never P&L or engagement |

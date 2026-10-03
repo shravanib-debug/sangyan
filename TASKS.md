@@ -16,7 +16,7 @@
 | Security as code | Grants, RLS, consent, idempotency, and redaction have tests |
 | Local-first | Core flow never waits for network and guest mode remains complete |
 | Guardrails everywhere | Product copy uses i18n keys and passes `lintCopy` |
-| Synthetic data only | Never commit or use real broker data in development or demos |
+| Safe broker data | Commit only synthetic fixtures; never record credentials or real financial payloads in source, tests, logs, screenshots, or demo artifacts |
 
 Small PRs are preferred. Changes to shared contracts, migrations, RLS policies, or guardrail rules require two reviewers.
 
@@ -28,8 +28,8 @@ The team has four members. Names can replace the Member A-D placeholders in `TRA
 
 | Member | Mission | Primary ownership | Logical specialties combined |
 |---|---|---|---|
-| A Platform and Backend Lead | Next.js, API, Supabase integration, Auth, sync, Docker, deployment | root config, `app/api/**`, `src/lib/**`, environment and release files | former platform lead plus backend implementation |
-| B Engine and Data Lead | Parser, signals, scoring, triage, Pact, simulation, metrics, fixtures | `src/engine/**`, `tools/synth/**`, `fixtures/**` | both engine specialties |
+| A Platform and Backend Lead | Next.js, API, Supabase, Auth, sync, broker connection lifecycle, Docker, deployment | root config, `app/api/**`, `src/lib/**`, `apps/broker-worker/**`, environment and release files | platform plus backend/broker runtime |
+| B Engine and Data Lead | Parser, signals, scoring, triage, Pact, simulation, metrics, provider normalization | `src/engine/**`, broker event mapping, `tools/synth/**`, `fixtures/**` | engine plus canonical broker data |
 | C Frontend and PWA Lead | Product screens, local services, service worker, i18n, voice, accessibility | `app/(pwa)/**`, `src/features/**`, `src/services/**`, `src/i18n/**`, `public/sw.js` | frontend plus PWA/UX |
 | D Security, QA, and Product Lead | RLS/privacy, guardrails, CI/E2E, pitch, demo, release verification | `supabase/**` policy review, `src/guardrails/**`, `tests/**`, pitch artifacts | security/QA plus product/demo |
 
@@ -37,10 +37,10 @@ A implements backend paths while D independently reviews grants, RLS, consent, s
 
 | Member | Primary tasks | P0 / P1 primary load |
 |---|---|---|
-| A | T1, T2, T23, T29-T33 | 8 P0 / 0 P1 |
-| B | T3-T9, T15, T22 | 7 P0 / 2 P1 |
+| A | T1, T2, T23, T29-T34; T35 with B | 10 P0 / 0 P1 |
+| B | T3-T9, T15, T22; T35 with A | 8 P0 / 2 P1 |
 | C | T11-T14, T16-T19, T21, T24, T26 | 7 P0 / 4 P1 |
-| D | T10, T20, T25, T27, T28; security review on T8, T21, T23, T29-T32 | 5 P0 / 0 P1 plus review gates |
+| D | T10, T20, T25, T27, T28; security review on T8, T21, T23, T29-T35 | 5 P0 / 0 P1 plus review gates |
 
 ---
 
@@ -48,10 +48,10 @@ A implements backend paths while D independently reviews grants, RLS, consent, s
 
 ### 3.1 Git and review
 
-- Branch names: `feat/T31-sync`, `fix/T08-pact-conflict`, `chore/T33-docker`.
+- Branch names: `feat/T31-sync`, `fix/T8-pact-conflict`, `chore/T33-docker`.
 - Conventional Commits with task ID.
 - Squash merge into protected `main`.
-- Do not commit `.env*`, Supabase service-role keys, VAPID private keys, or real user data.
+- Do not commit `.env*`, broker keys/tokens, token-encryption keys, Supabase service-role keys, VAPID private keys, or real user data.
 - Database PRs include migration, rollback/forward-fix note, grants, RLS policies, and tests.
 - UI PRs include screenshots in English and one regional language.
 
@@ -64,6 +64,7 @@ Contracts include:
 - Zod API/sync schemas
 - database schema, grants, and RLS policies
 - service-worker message protocol
+- read-only broker adapter and canonical provider-event schemas
 - public engine/service APIs
 
 For a contract change:
@@ -112,8 +113,8 @@ A task is done only when code is merged, acceptance tests pass, no architecture/
 
 **Owner:** D + A | **Priority:** P0 | **Block:** B0 | **Dependency:** T1
 
-- Add CI for typecheck, lint, unit, architecture, guardrail, Supabase DB/RLS, API, sync, build, E2E, and Lighthouse.
-- Add CODEOWNERS, PR template, secret scan, dependency policy, and synthetic-data check.
+- Add CI for typecheck, lint, unit, architecture, guardrail, Supabase DB/RLS, API, sync, broker-contract, build, E2E, and Lighthouse.
+- Add CODEOWNERS, PR template, broker-aware secret scan, dependency policy, and real-data fixture check.
 - Acceptance: planted import, secret, dependency, and RLS-denial failures break CI.
 
 #### T26: Internationalisation foundation
@@ -127,7 +128,7 @@ A task is done only when code is merged, acceptance tests pass, no architecture/
 
 **Owner:** A + D review | **Priority:** P0 | **Blocks:** B0-B2 | **Dependencies:** T1, T2
 
-- Configure Supabase CLI and create migrations for profiles, devices, consents, pacts, pact changes, check-ins, trade events, risk assessments, pauses, journals, push subscriptions, outbox, and audit events.
+- Configure Supabase CLI and create migrations for profiles, devices, consents, broker connections, pacts, pact changes, check-ins, trade events, risk assessments, pauses, journals, push subscriptions, outbox, and audit events.
 - Revoke broad defaults, grant only required operations, enable RLS, and add synthetic seed data.
 - Acceptance: `supabase db reset` succeeds; anonymous/owner/non-owner/service tests prove intended allow and deny behavior for every exposed table.
 
@@ -143,9 +144,9 @@ A task is done only when code is merged, acceptance tests pass, no architecture/
 
 **Owner:** A | **Priority:** P0 | **Blocks:** B0-B2 | **Dependencies:** T1, T29
 
-- Document Docker prerequisite for local Supabase; add `.dockerignore` and a multi-stage non-root Next.js standalone Dockerfile.
+- Document Docker prerequisite for local Supabase; add `.dockerignore`, a multi-stage non-root Next.js Dockerfile, and `apps/broker-worker/Dockerfile`.
 - Do not duplicate the Supabase stack in a hand-written Compose file.
-- Acceptance: local `supabase start` works, Next.js connects to it, and the production image builds and passes a health smoke test.
+- Acceptance: local `supabase start` works, Next.js connects to it, and both production images build and pass health smoke tests with the replay adapter.
 
 ### Deterministic engine
 
@@ -209,10 +210,10 @@ A task is done only when code is merged, acceptance tests pass, no architecture/
 
 #### T20: Privacy, consent, export, and deletion
 
-**Owner:** D + C | **Priority:** P0 | **Blocks:** B3-B5 | **Dependencies:** T29-T31
+**Owner:** D + C | **Priority:** P0 | **Blocks:** B3-B5 | **Dependencies:** T29-T31, T34-T35
 
-- Add data classification, raw-upload denial, log redaction, CSP, consent grant/revoke, combined export, local delete, and cloud account delete.
-- Acceptance: CSV/audio do not leave the device by default; revocation stops sync; delete removes cloud rows, subscriptions, local DB, and session.
+- Add data classification, raw-upload denial, log/token redaction, CSP, consent grant/revoke, broker disconnect, combined export, local delete, and cloud account delete.
+- Acceptance: CSV/audio do not leave the device by default; revocation stops sync and broker monitoring; disconnect deletes access material; account delete removes cloud rows, subscriptions, local DB, and session.
 
 #### T31: Route Handlers and offline synchronization
 
@@ -222,12 +223,28 @@ A task is done only when code is merged, acceptance tests pass, no architecture/
 - Re-run or verify risk assessments on the server; never trust a client-supplied final tier.
 - Acceptance: offline create/reconnect, duplicate delivery, expired session, non-owner request, and two-device Pact tests pass.
 
-#### T32: Synthetic event, outbox, and Web Push
+#### T32: Canonical broker-event pipeline, outbox, and Web Push
 
-**Owner:** A + C, D review | **Priority:** P0 | **Blocks:** B4-B5 | **Dependencies:** T6, T29, T31
+**Owner:** A + C, D review | **Priority:** P0 | **Blocks:** B4-B5 | **Dependencies:** T6, T29, T31, T35
 
-- Implement signed synthetic event ingestion, deduplication, server engine execution, transactional assessment/pause/outbox write, post-commit Edge Function dispatch, Cron retry, VAPID registration, generic push payload, and in-app fallback inbox.
-- Acceptance: one event produces one assessment and one logical notification despite retries; payload contains no amount, symbol, source, or journal text; UI says “simulated event.”
+- Implement authenticated canonical broker-event ingestion, deduplication, server engine execution, transactional event/assessment/pause/outbox write, Edge Function dispatch, Cron retry, VAPID registration, generic push payload, and in-app fallback inbox.
+- Acceptance: one broker/replay event produces one assessment and one logical notification despite retries; payload contains no amount, symbol, source, or journal text; replay mode is visibly labelled simulated.
+
+#### T34: Zerodha connection and credential lifecycle
+
+**Owner:** A + C, D review | **Priority:** P0 | **Blocks:** B3-B4 | **Dependencies:** T29, T30, T26
+
+- Implement connect, callback, status, daily reauthentication, and disconnect routes plus the consent/connection-health UI using Zerodha-hosted login, signed single-use state, exact redirects, and server-side request-token exchange.
+- Encrypt access material before database persistence; expose only provider/health/expiry to the client; redact secrets and tokens from logs and errors.
+- Acceptance: success, denial, expired/replayed state, callback replay, wrong user, expiry, disconnect, key rotation, and log-redaction tests pass. No UI ever asks for a broker password, PIN, TOTP, API secret, or token.
+
+#### T35: Persistent read-only broker worker
+
+**Owner:** A + B, D review | **Priority:** P0 | **Blocks:** B4-B5 | **Dependencies:** T2, T6, T29, T34
+
+- Build a Dockerized Node worker with a narrow `BrokerEventSource` interface and Zerodha adapter. The interface may observe orders/trades and reconcile history but must contain no place, modify, cancel, GTT, basket, or funds-transfer method.
+- Add connection leasing, heartbeats, WebSocket reconnect/backoff, REST reconciliation, event normalization, provider-ID/dedupe uniqueness, session-expiry handling, and replay/sandbox adapters.
+- Acceptance: architecture tests prove no order-mutation surface; reconnect gaps and duplicates are handled; disconnect/expiry stops ingestion; stale health reaches the PWA; worker failure never claims live protection.
 
 ### Product UI
 
@@ -311,19 +328,19 @@ A task is done only when code is merged, acceptance tests pass, no architecture/
 
 **Owner:** D | **Priority:** P0 | **Blocks:** B3-B6 | **Dependency:** B
 
-- Cover problem, target user, local-first full-stack architecture, guardrails, RLS/privacy, metrics, synthetic connected flow, limitations, and pilot path.
+- Cover problem, target user, USP, local-first architecture, read-only Zerodha flow, persistent worker, guardrails, RLS/privacy, metrics, and the after-event/no-blocking limitation.
 
 #### T28: Demo script and video
 
 **Owner:** D | **Priority:** P0 | **Blocks:** B1, B5-B6 | **Dependency:** M5
 
-- Produce a 3-5 minute captioned demo covering offline and connected paths with a recorded fallback.
+- Produce a 3-5 minute captioned demo covering broker-hosted connection, live/sandbox event, push-to-pause flow, offline/manual path, disconnect, and a clearly labelled recorded replay fallback.
 
 #### T23: Deployment and submission
 
 **Owner:** A + D | **Priority:** P0 | **Blocks:** B6-B7 | **Dependency:** M5
 
-- Freeze code, apply reviewed Supabase migrations/functions, deploy Next.js to Vercel, verify environment isolation, smoke-test production, and submit artifacts before the safety buffer.
+- Freeze code, apply reviewed Supabase migrations/functions, deploy Next.js to Vercel and the broker worker to a persistent container host, verify secret/environment isolation and session health, smoke-test production, and submit artifacts before the safety buffer.
 
 ---
 
@@ -334,8 +351,8 @@ A task is done only when code is merged, acceptance tests pass, no architecture/
 | M0 | T1, T2, T24, T25, T26, T29, T33 |
 | M1 | T3-T9 |
 | M2 | T11, T12 |
-| M3 | T30, T31 |
-| M4 | T32 |
+| M3 | T30, T31, T34 |
+| M4 | T32, T35 |
 | M5 | T10, T13-T22 |
 | M6 | T23, T27, T28 |
 

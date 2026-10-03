@@ -29,21 +29,24 @@
 | Supabase local project ID | `TBD` |
 | Supabase preview/staging project | `TBD` |
 | Supabase production project | `TBD` |
+| Broker worker staging URL/health | `TBD` |
+| Broker worker production URL/health | `TBD` |
+| Zerodha app approval/terms check | `TBD` |
 | Repository URL | `TBD` |
 
 | Member assignment | Person | Backup/reviewer |
 |---|---|---|
-| A Platform and Backend Lead | | D security review |
-| B Engine and Data Lead | | A integration review |
+| A Platform and Backend Lead | | D security review; B worker/data review |
+| B Engine and Data Lead | | A broker integration review |
 | C Frontend and PWA Lead | | D accessibility/privacy review |
 | D Security, QA, and Product Lead | | A release review |
 
 | Member | Primary task allocation | Workload note |
 |---|---|---|
-| A | T1, T2, T23, T29-T33 | Backend critical path and deployment |
-| B | T3-T9, T15, T22 | Engine critical path; T15/T22 are P1 |
+| A | T1, T2, T23, T29-T34; T35 with B | Backend, broker, and deployment critical path |
+| B | T3-T9, T15, T22; T35 with A | Engine/data critical path; provider normalization; T15/T22 are P1 |
 | C | T11-T14, T16-T19, T21, T24, T26 | UI/PWA path; T16-T19 are first workload cuts |
-| D | T10, T20, T25, T27, T28 plus security reviews | Owns release gates and independent backend review |
+| D | T10, T20, T25, T27, T28 plus T29-T35 security reviews | Owns release gates and independent backend/broker review |
 
 ---
 
@@ -54,12 +57,12 @@
 | M0 Full-stack foundation | B0-B1 | TODO | 0 / 7 | A + D | |
 | M1 Deterministic engine | B1-B3 | TODO | 0 / 7 | B + A | |
 | M2 Local walking skeleton | End B2 | TODO | 0 / 2 | C + D | |
-| M3 Secure cloud path | B3-B4 | TODO | 0 / 2 | A + D | |
-| M4 Connected demonstration | B4-B5 | TODO | 0 / 1 | A + C + D | |
+| M3 Secure cloud and broker connection | B3-B4 | TODO | 0 / 3 | A + D | |
+| M4 Connected demonstration | B4-B5 | TODO | 0 / 2 | A + B + C + D | |
 | M5 Complete demo and polish | B5-B6 | TODO | 0 / 11 | C + D | |
 | M6 Freeze and submission | B6-B7 | TODO | 0 / 3 | A + D | |
 
-Progress: **0 / 33 tasks done**.
+Progress: **0 / 35 tasks done**.
 
 ---
 
@@ -86,7 +89,7 @@ Progress: **0 / 33 tasks done**.
 | T17 | Read aloud | C | P1 | B4 | T26 | TODO | | | | |
 | T18 | Panic companion | C | P1 | B5 | T2 | TODO | | | | |
 | T19 | Post-loss process review | C | P1 | B5 | T6 | TODO | | | | First product cut |
-| T20 | Privacy, consent, export, deletion | D + C | P0 | B3-B5 | T29-T31 | TODO | | | | |
+| T20 | Privacy, consent, broker disconnect, export, deletion | D + C | P0 | B3-B5 | T29-T31,T34-T35 | TODO | | | | |
 | T21 | Performance and accessibility | C + D | P0 | B4-B5 | T12,T24 | TODO | | | | |
 | T22 | Synthetic evaluation | B | P1 | B4 | T4,T6 | TODO | | | | |
 | T23 | Deployment and submission | A + D | P0 | B6-B7 | M5 | TODO | | | | |
@@ -98,8 +101,10 @@ Progress: **0 / 33 tasks done**.
 | T29 | Supabase schema, migrations, grants, RLS | A + D review | P0 | B0-B2 | T1,T2 | TODO | | | | |
 | T30 | Optional Auth and guest-data adoption | A + C, D review | P0 | B1-B3 | T29 | TODO | | | | |
 | T31 | Route Handlers and offline sync | A + D review | P0 | B2-B4 | T2,T8,T29,T30 | TODO | | | | |
-| T32 | Synthetic event, outbox, Edge Function, Web Push | A + C, D review | P0 | B4-B5 | T6,T29,T31 | TODO | | | | Simulated source only |
+| T32 | Canonical broker-event pipeline, outbox, Edge Function, Web Push | A + C, D review | P0 | B4-B5 | T6,T29,T31,T35 | TODO | | | | Replay must be labelled simulated |
 | T33 | Docker and environment workflow | A | P0 | B0-B2 | T1,T29 | TODO | | | | |
+| T34 | Zerodha connection and credential lifecycle | A + C, D review | P0 | B3-B4 | T29,T30,T26 | TODO | | | | Hosted login; daily reauth |
+| T35 | Persistent read-only broker worker | A + B, D review | P0 | B4-B5 | T2,T6,T29,T34 | TODO | | | | No order-mutation API surface |
 
 ---
 
@@ -122,6 +127,11 @@ Progress: **0 / 33 tasks done**.
 | I16 service role absent from browser | Secret/bundle scan | TODO | |
 | I17 idempotent sync | Duplicate-delivery integration test | TODO | |
 | I18 transactional outbox | DB/API integration test | TODO | |
+| I19 broker material server-only, encrypted, redacted | Secret, log, and DB tests | TODO | |
+| I20 no order-mutation adapter or route surface | Type and architecture tests | TODO | |
+| I21 callback state/nonce and single-use exchange | Route replay/security tests | TODO | |
+| I22 disconnect stops ingestion and deletes token | Integration/deletion tests | TODO | |
+| I23 after-event/no-blocking claim accuracy | Copy snapshots and manual sign-off | TODO | |
 
 ### 5.2 Security and privacy sign-off
 
@@ -132,6 +142,10 @@ Progress: **0 / 33 tasks done**.
 | Consent purpose required for optional sync | TODO | | |
 | RLS denies cross-user access | TODO | | |
 | Service-role and VAPID private keys server-only | TODO | | |
+| Broker API secret and token-encryption key server/worker-only | TODO | | |
+| Broker access material encrypted, redacted, non-exportable, and deleted on disconnect | TODO | | |
+| Adapter/routes contain no place, modify, cancel, GTT, basket, or funds-transfer operations | TODO | | |
+| Public rollout has broker approval/terms sign-off | TODO | | |
 | Logs redact journal and financial payloads | TODO | | |
 | Generic push payload contains no sensitive detail | TODO | | |
 | Export, revoke, local delete, and account delete work | TODO | | |
@@ -141,14 +155,16 @@ Progress: **0 / 33 tasks done**.
 | Scene | Live | Offline/fallback | en | hi | mr | Notes |
 |---|---|---|---|---|---|---|
 | Problem and persona | TODO | n/a | TODO | TODO | TODO | |
-| Guest onboarding/privacy | TODO | TODO | TODO | TODO | TODO | |
+| Guest onboarding/privacy and Pact | TODO | TODO | TODO | TODO | TODO | |
+| Zerodha hosted connection and health | TODO | Labelled replay | TODO | TODO | TODO | No secrets shown |
 | Simulator | TODO | TODO | TODO | TODO | TODO | |
 | Pact and delayed loosening | TODO | TODO | TODO | TODO | TODO | |
 | Loan-funded check-in | TODO | TODO | TODO | TODO | TODO | |
 | Explainable pause | TODO | TODO | TODO | TODO | TODO | |
 | Offline queue then sync | TODO | TODO | TODO | TODO | TODO | |
-| Synthetic event and outbox | TODO | Recorded/local fallback | TODO | TODO | TODO | |
+| Sandbox/live broker event, worker, and outbox | TODO | Labelled replay/recording | TODO | TODO | TODO | |
 | Generic push opens protected flow | TODO | In-app fallback | TODO | TODO | TODO | |
+| Broker disconnect stops monitoring | TODO | n/a | TODO | TODO | TODO | |
 | Metrics/replay caveats | TODO | TODO | TODO | TODO | TODO | |
 | Privacy, RLS, limitations | TODO | n/a | TODO | TODO | TODO | |
 
@@ -163,6 +179,8 @@ Progress: **0 / 33 tasks done**.
 | Local Next.js + Docker Supabase | n/a | n/a | TODO | TODO | |
 | Vercel preview + staging Supabase | n/a | n/a | TODO | TODO | |
 | Production Vercel + production Supabase | TODO | TODO | TODO | TODO | |
+| Persistent broker worker + replay adapter | n/a | n/a | TODO | TODO | |
+| Persistent broker worker + Zerodha sandbox/live | n/a | n/a | TODO | TODO | Approval required |
 
 ### 5.5 Release package
 
@@ -170,6 +188,8 @@ Progress: **0 / 33 tasks done**.
 |---|---|---|---|
 | Production PWA | A | TODO | |
 | Applied production migrations/functions | A + D review | TODO | |
+| Broker worker deployed and health/session alarms verified | A + B + D | TODO | |
+| Zerodha app credentials configured outside repository | A + D | TODO | |
 | 3-5 minute video | D | TODO | |
 | PPT | D | TODO | |
 | Recorded connected-flow fallback | D | TODO | |
@@ -195,8 +215,11 @@ Progress: **0 / 33 tasks done**.
 | D-003 | 2026-10-03 | Use Supabase PostgreSQL/Auth/RLS | Managed relational backend with tested row authorization | T29-T32 |
 | D-004 | 2026-10-03 | Use Docker through Supabase CLI; keep a portable Next.js Dockerfile | Reproducible local backend without cloning Supabase Compose | T33 |
 | D-005 | 2026-10-03 | Keep raw CSV/audio local by default | Data minimisation and user trust | T3, T16, T20, T31 |
-| D-006 | 2026-10-03 | Demonstrate connected detection with a labelled synthetic event | No approved live broker integration in MVP | T32, pitch/demo |
+| D-006 | 2026-10-03 | Use Zerodha first through an official, consented, strictly read-only integration | Stronger timely intervention than voluntary app opening; no order authority | T32, T34, T35, pitch/demo |
 | D-007 | 2026-10-03 | Call counterfactual output “retrospective replay difference” | Avoid unsupported causal “loss avoided” claim | T14, T15, copy |
+| D-008 | 2026-10-03 | Run broker WebSockets in a persistent Dockerized Node worker | Vercel and Edge functions are bounded request runtimes | T33, T35, deployment |
+| D-009 | 2026-10-03 | Keep synthetic replay only for tests and clearly labelled fallback | Deterministic tests and demo resilience without pretending a broker connection | T4, T22, T28, T32, T35 |
+| D-010 | 2026-10-03 | Describe Thehrav as an after-event behavioral circuit breaker | Broker updates cannot block the observed or next order in the broker app | Product copy, demo, release gate |
 
 ---
 
@@ -215,7 +238,11 @@ Progress: **0 / 33 tasks done**.
 | R-09 Web Push reliability | AMBER | | Fallback required |
 | R-10 STT quality | AMBER | | Optional feature |
 | R-11 demo network failure | AMBER | | Local Docker/recording required |
-| R-12 synthetic-event ambiguity | GREEN | | Label mandated |
+| R-12 replay/live ambiguity | AMBER | | Persistent simulated-replay label required |
+| R-16 broker secret/token exposure | AMBER | | Awaiting T34 security tests |
+| R-17 broker session/worker outage | AMBER | | Health, reauth, reconnect, and manual fallback required |
+| R-18 broker approval/terms | AMBER | | Public onboarding blocked until confirmed |
+| R-19 order-blocking overclaim | GREEN | | Mandatory after-event limitation |
 
 ---
 
