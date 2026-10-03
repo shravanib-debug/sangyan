@@ -40,3 +40,17 @@ export class ThehravDatabase extends Dexie {
 }
 
 export const localDatabase = new ThehravDatabase();
+
+export async function clearLocalData() {
+  await Promise.all(localDatabase.tables.map((table) => table.clear()));
+}
+
+export async function exportLocalData() {
+  const data: Record<string, unknown[]> = {};
+  for (const table of localDatabase.tables) {
+    if (table.name !== "settings" && table.name !== "syncQueue") {
+      data[table.name] = await table.toArray();
+    }
+  }
+  return data;
+}

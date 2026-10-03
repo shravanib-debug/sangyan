@@ -1,5 +1,5 @@
-import { PlaceholderScreen } from "@/features/app/placeholder-screen";
+import { PanicCompanion } from "@/features/panic/panic-companion";
 
 export default function PanicPage() {
-  return <PlaceholderScreen screen="panic" />;
+  return <PanicCompanion />;
 }

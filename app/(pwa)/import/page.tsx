@@ -1,5 +1,5 @@
-import { PlaceholderScreen } from "@/features/app/placeholder-screen";
+import { ImportScreen } from "@/features/import/import-screen";
 
 export default function ImportPage() {
-  return <PlaceholderScreen screen="import" />;
+  return <ImportScreen />;
 }

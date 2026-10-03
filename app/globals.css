@@ -102,3 +102,13 @@ a.button {
     animation-iteration-count: 1 !important;
   }
 }
+
+@media (prefers-contrast: more) {
+  :root {
+    --border: #000000;
+    --foreground: #000000;
+    --muted: #000000;
+    --primary: #000000;
+    --warning: #000000;
+  }
+}

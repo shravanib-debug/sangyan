@@ -126,6 +126,39 @@ export function SettingsScreen() {
       setPushOn(true);
     });
 
+  const handleExport = () =>
+    run(async () => {
+      const { exportLocalData } = await import("@/storage/local/database");
+      const data = await exportLocalData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `thehrav-export-${new Date().toISOString().split("T")[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+  const handleDeleteLocal = () => {
+    if (!window.confirm(t("settings.deleteLocalConfirm"))) return;
+    run(async () => {
+      const { clearLocalData } = await import("@/storage/local/database");
+      await clearLocalData();
+      window.location.href = "/";
+    });
+  };
+
+  const handleDeleteAccount = () => {
+    if (!window.confirm(t("settings.deleteAccountConfirm"))) return;
+    run(async () => {
+      const response = await fetch("/api/account/delete", { method: "POST" });
+      if (!response.ok) throw new Error("delete");
+      const { clearLocalData } = await import("@/storage/local/database");
+      await clearLocalData();
+      window.location.href = "/";
+    });
+  };
+
   const noticeText =
     notice && (NOTICE_CODES as readonly string[]).includes(notice)
       ? t(`settings.notices.${notice}` as "settings.notices.connected")
@@ -252,6 +285,38 @@ export function SettingsScreen() {
             </button>
           </section>
         )}
+
+        <section className={card} aria-labelledby="privacy-title">
+          <h2 id="privacy-title" className="text-xl font-bold text-red-600">
+            {t("settings.privacyTitle")}
+          </h2>
+          <p className="text-gray-600">{t("settings.privacyBody")}</p>
+          <div className="space-y-3 pt-2">
+            <button
+              className="w-full p-4 bg-white border-2 border-gray-300 text-gray-900 rounded-xl font-bold hover:bg-gray-50 disabled:opacity-60"
+              disabled={busy}
+              onClick={() => void handleExport()}
+            >
+              {t("settings.exportData")}
+            </button>
+            <button
+              className="w-full p-4 bg-white border-2 border-red-300 text-red-600 rounded-xl font-bold hover:bg-red-50 disabled:opacity-60"
+              disabled={busy}
+              onClick={() => void handleDeleteLocal()}
+            >
+              {t("settings.deleteLocal")}
+            </button>
+            {signedIn && (
+              <button
+                className="w-full p-4 bg-red-600 text-white rounded-xl font-bold shadow-md hover:bg-red-700 disabled:opacity-60"
+                disabled={busy}
+                onClick={() => void handleDeleteAccount()}
+              >
+                {t("settings.deleteAccount")}
+              </button>
+            )}
+          </div>
+        </section>
 
         <Link href="/home" className="block text-center underline">
           {t("common.backHome")}

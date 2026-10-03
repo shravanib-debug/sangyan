@@ -1,5 +1,5 @@
-import { PlaceholderScreen } from "@/features/app/placeholder-screen";
+import { PostLossReview } from "@/features/review/post-loss-review";
 
 export default function ReviewPage() {
-  return <PlaceholderScreen screen="review" />;
+  return <PostLossReview />;
 }

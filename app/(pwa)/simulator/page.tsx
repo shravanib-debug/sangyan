@@ -1,5 +1,5 @@
-import { PlaceholderScreen } from "@/features/app/placeholder-screen";
+import { SimulatorScreen } from "@/features/simulator/simulator-screen";
 
 export default function SimulatorPage() {
-  return <PlaceholderScreen screen="simulator" />;
+  return <SimulatorScreen />;
 }
