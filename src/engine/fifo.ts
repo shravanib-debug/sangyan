@@ -105,7 +105,7 @@ export function pairFifo(parsedRows: ParsedRow[]): FifoTrade[] {
         source: "csv",
         pnlPaise: matchedQty > 0 ? pnlPaise : undefined,
         orderId: row.orderId,
-        // @ts-expect-error - we add holdTimeSeconds to help signals
+        // we add holdTimeSeconds to help signals
         holdTimeSeconds: avgHoldTimeSec,
       });
     }
