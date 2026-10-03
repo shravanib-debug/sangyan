@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     const results = [];
 
     for (const item of items) {
-      const { entityType, payload, id: idempotency_key, clientCreatedAt } = item;
+      const { entityType, payload, id: idempotency_key } = item;
       let error = null;
 
       if (entityType === "pact") {
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ results });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }
 }

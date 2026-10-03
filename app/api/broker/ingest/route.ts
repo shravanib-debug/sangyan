@@ -109,16 +109,16 @@ export async function POST(req: NextRequest) {
     };
 
     const history: Trade[] = (tradesRes.data || [])
-      .filter((t: any) => t.status === "COMPLETE" || t.status === "FILLED")
-      .map((t: any) => ({
-        id: t.id,
-        timestamp: t.observed_at,
-        symbol: t.symbol || "UNKNOWN",
-        side: t.side as any || "buy",
-        quantity: t.quantity || 1,
-        pricePaise: t.average_price_paise || 0,
-        pnlPaise: t.pnl_paise || 0,
-        orderId: t.provider_order_id,
+      .filter((t: Record<string, unknown>) => t.status === "COMPLETE" || t.status === "FILLED")
+      .map((t: Record<string, unknown>) => ({
+        id: String(t.id),
+        timestamp: String(t.observed_at),
+        symbol: String(t.symbol || "UNKNOWN"),
+        side: (t.side as "buy" | "sell") || "buy",
+        quantity: Number(t.quantity || 1),
+        pricePaise: Number(t.average_price_paise || 0),
+        pnlPaise: Number(t.pnl_paise || 0),
+        orderId: t.provider_order_id ? String(t.provider_order_id) : undefined,
         source: "connected"
       }));
 
@@ -183,8 +183,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ status: "success", assessment: result });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Ingest error:", err);
-    return NextResponse.json({ error: "internal_error", details: err.message }, { status: 500 });
+    return NextResponse.json({ error: "internal_error", details: (err as Error).message }, { status: 500 });
   }
 }

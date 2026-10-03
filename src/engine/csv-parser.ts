@@ -1,5 +1,5 @@
 import Papa from "papaparse";
-import { Trade, TradeSide } from "./types";
+import { TradeSide } from "./types";
 
 export interface ParsedRow {
   timestamp: string;
@@ -115,7 +115,6 @@ export function parseBrokerCsv(csvString: string): ParseResult {
 }
 
 function mergeFills(rows: ParsedRow[]): ParsedRow[] {
-  const merged: ParsedRow[] = [];
   const map = new Map<string, ParsedRow>();
 
   for (const row of rows) {

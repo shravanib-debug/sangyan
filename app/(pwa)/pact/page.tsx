@@ -11,12 +11,19 @@ export default function PactPage() {
   
   const [activePact, setActivePact] = useState<Pact | null>(null);
   const [pendingPact, setPendingPact] = useState<Pact | null>(null);
+  const [nowTime, setNowTime] = useState<number | null>(null);
   
   const [lossLimit, setLossLimit] = useState(5000);
   const [maxTrades, setMaxTrades] = useState(5);
   const [cooldown, setCooldown] = useState(30);
   const [blockBorrowed, setBlockBorrowed] = useState(true);
   const [blockEmergency, setBlockEmergency] = useState(true);
+
+  useEffect(() => {
+    setNowTime(Date.now());
+    const interval = setInterval(() => setNowTime(Date.now()), 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     async function loadPacts() {
@@ -90,8 +97,8 @@ export default function PactPage() {
   };
 
   const calculateHoursToPending = () => {
-    if (!pendingPact) return null;
-    const diff = new Date(pendingPact.effectiveAt).getTime() - Date.now();
+    if (!pendingPact || !nowTime) return null;
+    const diff = new Date(pendingPact.effectiveAt).getTime() - nowTime;
     if (diff <= 0) return null;
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));

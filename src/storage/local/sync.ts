@@ -1,6 +1,6 @@
 import { localDatabase, type SyncQueueItem } from "./database";
 
-export async function enqueueSyncItem(entityType: SyncQueueItem["entityType"], payload: any, id?: string) {
+export async function enqueueSyncItem(entityType: SyncQueueItem["entityType"], payload: Record<string, unknown>, id?: string) {
   const itemId = id || crypto.randomUUID();
   await localDatabase.syncQueue.put({
     id: itemId,

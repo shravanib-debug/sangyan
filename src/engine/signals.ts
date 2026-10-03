@@ -106,17 +106,17 @@ export function detectLateNight(pact: Pact, nowEpochMs: number): SignalHit | nul
 export function detectLossHold(trades: Trade[]): SignalHit | null {
   // In a real system, we'd compute median hold times. 
   // Let's implement a simplified version.
-  const losers = trades.filter(t => t.pnlPaise !== undefined && t.pnlPaise < 0 && (t as any).holdTimeSeconds !== undefined);
-  const winners = trades.filter(t => t.pnlPaise !== undefined && t.pnlPaise > 0 && (t as any).holdTimeSeconds !== undefined);
+  const losers = trades.filter(t => t.pnlPaise !== undefined && t.pnlPaise < 0 && (t as Trade & { holdTimeSeconds?: number }).holdTimeSeconds !== undefined);
+  const winners = trades.filter(t => t.pnlPaise !== undefined && t.pnlPaise > 0 && (t as Trade & { holdTimeSeconds?: number }).holdTimeSeconds !== undefined);
 
   if (losers.length >= 3 && winners.length >= 3) {
     // Sort and get median
-    const sortHold = (a: Trade, b: Trade) => (a as any).holdTimeSeconds - (b as any).holdTimeSeconds;
+    const sortHold = (a: Trade, b: Trade) => ((a as Trade & { holdTimeSeconds?: number }).holdTimeSeconds || 0) - ((b as Trade & { holdTimeSeconds?: number }).holdTimeSeconds || 0);
     losers.sort(sortHold);
     winners.sort(sortHold);
 
-    const medLoser = (losers[Math.floor(losers.length / 2)] as any).holdTimeSeconds;
-    const medWinner = (winners[Math.floor(winners.length / 2)] as any).holdTimeSeconds;
+    const medLoser = (losers[Math.floor(losers.length / 2)] as Trade & { holdTimeSeconds?: number }).holdTimeSeconds || 0;
+    const medWinner = (winners[Math.floor(winners.length / 2)] as Trade & { holdTimeSeconds?: number }).holdTimeSeconds || 0;
 
     if (medWinner > 0 && (medLoser / medWinner) >= 2.0) {
       return {

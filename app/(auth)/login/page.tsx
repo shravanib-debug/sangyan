@@ -1,13 +1,11 @@
 "use client";
 
-import { useTranslation } from "react-i18next";
 import { login, signup } from "../../auth/actions";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { localDatabase } from "@/storage/local/database";
 
 export default function LoginPage() {
-  const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -24,8 +22,8 @@ export default function LoginPage() {
         setError(res.error);
         setLoading(false);
       }
-    } catch (e: any) {
-      setError(e.message || "An unexpected error occurred");
+    } catch (e: unknown) {
+      setError((e as Error).message || "An unexpected error occurred");
       setLoading(false);
     }
   }

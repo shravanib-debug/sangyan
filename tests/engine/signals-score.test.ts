@@ -16,10 +16,10 @@ describe("Six-signal engine & Risk Score", () => {
     effectiveAt: new Date().toISOString()
   };
 
-  const createRequest = (history: Trade[], now: number, checkIn?: any): WorkerDetectRequest => ({
+  const createRequest = (history: Trade[], now: number, checkIn?: Partial<WorkerDetectRequest["checkIn"]>): WorkerDetectRequest => ({
     history,
     pact: basePact,
-    checkIn,
+    checkIn: checkIn as WorkerDetectRequest["checkIn"],
     nowEpochMs: now,
     config: DEFAULT_ENGINE_CONFIG
   });

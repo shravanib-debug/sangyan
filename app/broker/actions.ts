@@ -7,7 +7,7 @@ export async function connectBroker() {
   // redirect(url)
 
   // Since this is a demo without actual credentials, we mock the callback:
-  redirect('/api/broker/callback?request_token=mock_token_123' as any)
+  redirect('/api/broker/callback?request_token=mock_token_123')
 }
 
 export async function disconnectBroker() {

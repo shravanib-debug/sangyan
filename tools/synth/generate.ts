@@ -19,7 +19,7 @@ function toCsv(trades: SyntheticTrade[]): string {
   return csv;
 }
 
-function randomChoice<T>(rng: any, arr: T[]): T {
+function randomChoice<T>(rng: { next: () => number }, arr: T[]): T {
   const i = Math.floor(rng.next() * arr.length);
   return arr[i]!;
 }
@@ -48,7 +48,6 @@ function generateCalm() {
 }
 
 function generateRevenge() {
-  const rng = createRng(1002);
   const trades: SyntheticTrade[] = [];
   let ts = new Date("2026-10-02T10:00:00Z").getTime();
   
@@ -65,7 +64,6 @@ function generateRevenge() {
 }
 
 function generateOvertrader() {
-  const rng = createRng(1003);
   const trades: SyntheticTrade[] = [];
   let ts = new Date("2026-10-03T10:00:00Z").getTime();
   
@@ -79,11 +77,10 @@ function generateOvertrader() {
 }
 
 function generateLateNight() {
-  const rng = createRng(1004);
   const trades: SyntheticTrade[] = [];
   
   // Late night IST is e.g. 1 AM (19:30 UTC previous day)
-  let ts = new Date("2026-10-03T19:30:00Z").getTime(); 
+  const ts = new Date("2026-10-03T19:30:00Z").getTime(); 
   
   trades.push({ Symbol: "CRYPTO-BTC", Side: "buy", Qty: 1, Price: 5000000, Time: new Date(ts).toISOString() });
   return toCsv(trades);

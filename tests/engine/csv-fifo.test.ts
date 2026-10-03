@@ -16,9 +16,9 @@ describe("CSV Parser and FIFO Pairing", () => {
     expect(trade.quantity).toBe(100);
     expect(trade.pricePaise).toBe(250000);
     
-    // @ts-ignore
+    // @ts-expect-error
     expect(trade.Name).toBeUndefined();
-    // @ts-ignore
+    // @ts-expect-error
     expect(trade.Account).toBeUndefined();
   });
 
