@@ -55,14 +55,14 @@
 | Milestone | Target | Status | Done / total | Gate reviewer | Date |
 |---|---|---|---|---|---|
 | M0 Full-stack foundation | B0-B1 | DONE | 7 / 7 | A + D | 2026-10-03 |
-| M1 Deterministic engine | B1-B3 | TODO | 2 / 7 | B + A | |
+| M1 Deterministic engine | B1-B3 | TODO | 3 / 7 | B + A | |
 | M2 Local walking skeleton | End B2 | TODO | 0 / 2 | C + D | |
 | M3 Secure cloud and broker connection | B3-B4 | TODO | 0 / 3 | A + D | |
 | M4 Connected demonstration | B4-B5 | TODO | 0 / 2 | A + B + C + D | |
 | M5 Complete demo and polish | B5-B6 | TODO | 0 / 11 | C + D | |
 | M6 Freeze and submission | B6-B7 | TODO | 0 / 3 | A + D | |
 
-Progress: **9 / 35 tasks done**.
+Progress: **10 / 35 tasks done**.
 
 ---
 
@@ -76,7 +76,7 @@ Progress: **9 / 35 tasks done**.
 | T4 | Synthetic personas and fixtures | B | P0 | B1 | T2 | DONE | B | main | fixtures generated | |
 | T5 | Six-signal engine | B | P0 | B2 | T3,T4 | TODO | | | | |
 | T6 | Risk score and explanation | B | P0 | B3 | T5,T7 | TODO | | | | |
-| T7 | Money-source triage | B | P0 | B1 | T2 | TODO | | | | |
+| T7 | Money-source triage | B | P0 | B1 | T2 | DONE | B | main | triage.test.ts pass | |
 | T8 | Pact engine and stricter conflict policy | B + D review | P0 | B2 | T2 | TODO | | | | |
 | T9 | Simulator engine | B | P0 | B3 | T2 | TODO | | | | |
 | T10 | Copy guardrails | D | P0 | B1 | T1 | TODO | | | | |
