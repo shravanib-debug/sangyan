@@ -8,8 +8,9 @@ export function detectRevenge(trades: Trade[], nowEpochMs: number, minLossPaise:
   // Find the most recent closed trade with a loss
   let lastLoss: Trade | null = null;
   for (let i = trades.length - 1; i >= 0; i--) {
-    if (trades[i].pnlPaise !== undefined && trades[i].pnlPaise! < -minLossPaise) {
-      lastLoss = trades[i];
+    const trade = trades[i];
+    if (trade && trade.pnlPaise !== undefined && trade.pnlPaise < -minLossPaise) {
+      lastLoss = trade;
       break;
     }
   }
@@ -105,17 +106,17 @@ export function detectLateNight(pact: Pact, nowEpochMs: number): SignalHit | nul
 export function detectLossHold(trades: Trade[]): SignalHit | null {
   // In a real system, we'd compute median hold times. 
   // Let's implement a simplified version.
-  const losers = trades.filter(t => t.pnlPaise !== undefined && t.pnlPaise < 0 && t.holdSec !== undefined);
-  const winners = trades.filter(t => t.pnlPaise !== undefined && t.pnlPaise > 0 && t.holdSec !== undefined);
+  const losers = trades.filter(t => t.pnlPaise !== undefined && t.pnlPaise < 0 && (t as any).holdTimeSeconds !== undefined);
+  const winners = trades.filter(t => t.pnlPaise !== undefined && t.pnlPaise > 0 && (t as any).holdTimeSeconds !== undefined);
 
   if (losers.length >= 3 && winners.length >= 3) {
     // Sort and get median
-    const sortHold = (a: Trade, b: Trade) => a.holdSec! - b.holdSec!;
+    const sortHold = (a: Trade, b: Trade) => (a as any).holdTimeSeconds - (b as any).holdTimeSeconds;
     losers.sort(sortHold);
     winners.sort(sortHold);
 
-    const medLoser = losers[Math.floor(losers.length / 2)].holdSec!;
-    const medWinner = winners[Math.floor(winners.length / 2)].holdSec!;
+    const medLoser = (losers[Math.floor(losers.length / 2)] as any).holdTimeSeconds;
+    const medWinner = (winners[Math.floor(winners.length / 2)] as any).holdTimeSeconds;
 
     if (medWinner > 0 && (medLoser / medWinner) >= 2.0) {
       return {

@@ -21,7 +21,7 @@ function toCsv(trades: SyntheticTrade[]): string {
 
 function randomChoice<T>(rng: any, arr: T[]): T {
   const i = Math.floor(rng.next() * arr.length);
-  return arr[i];
+  return arr[i]!;
 }
 
 function generateCalm() {

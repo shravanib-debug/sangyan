@@ -10,7 +10,7 @@ describe("CSV Parser and FIFO Pairing", () => {
     expect(result.droppedRows).toBe(0);
     expect(result.trades.length).toBe(1);
     
-    const trade = result.trades[0];
+    const trade = result.trades[0]!;
     expect(trade.symbol).toBe("RELIANCE");
     expect(trade.side).toBe("buy");
     expect(trade.quantity).toBe(100);
@@ -36,9 +36,9 @@ TCS,Buy,30,3000,2026-10-03T10:20:00Z`;
     expect(fifo.length).toBe(5);
 
     // 1. Buy 100
-    expect(fifo[0].pnlPaise).toBeUndefined();
+    expect(fifo[0]!.pnlPaise).toBeUndefined();
     // 2. Buy 50
-    expect(fifo[1].pnlPaise).toBeUndefined();
+    expect(fifo[1]!.pnlPaise).toBeUndefined();
     
     // 3. Sell 120 (Matches 100 from T1, 20 from T2)
     // T1 buy = 3000 * 100 = 300000
@@ -46,21 +46,21 @@ TCS,Buy,30,3000,2026-10-03T10:20:00Z`;
     // Total cost = 360200
     // Sell = 3050 * 120 = 366000
     // PnL = 366000 - 360200 = 5800 (580000 paise)
-    expect(fifo[2].pnlPaise).toBe(580000);
-    expect(fifo[2].holdTimeSeconds).toBeGreaterThan(0);
+    expect(fifo[2]!.pnlPaise).toBe(580000);
+    expect(fifo[2]!.holdTimeSeconds).toBeGreaterThan(0);
 
     // After T3, remaining long position is 30 from T2.
     // 4. Sell 60 (Matches 30 from T2, then flips to 30 short)
     // T2 buy = 3010 * 30 = 90300
     // Sell = 3020 * 30 = 90600
     // PnL = 90600 - 90300 = 300 (30000 paise)
-    expect(fifo[3].pnlPaise).toBe(30000);
+    expect(fifo[3]!.pnlPaise).toBe(30000);
 
     // 5. Buy 30 (Matches 30 short from T4)
     // Short sell price = 3020
     // Buy cover price = 3000
     // PnL = (3020 - 3000) * 30 = 600 (60000 paise)
-    expect(fifo[4].pnlPaise).toBe(60000);
+    expect(fifo[4]!.pnlPaise).toBe(60000);
   });
   
   it("merges fills by order ID or exactly identical timestamp", () => {

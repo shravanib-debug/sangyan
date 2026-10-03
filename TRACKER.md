@@ -56,13 +56,13 @@
 |---|---|---|---|---|---|
 | M0 Full-stack foundation | B0-B1 | DONE | 7 / 7 | A + D | 2026-10-03 |
 | M1 Deterministic engine | B1-B3 | DONE | 7 / 7 | B + A | |
-| M2 Local walking skeleton | End B2 | TODO | 0 / 2 | C + D | |
-| M3 Secure cloud and broker connection | B3-B4 | TODO | 0 / 3 | A + D | |
-| M4 Connected demonstration | B4-B5 | TODO | 0 / 2 | A + B + C + D | |
+| M2 Local walking skeleton | End B2 | DONE | 2 / 2 | C + D | 2026-10-03 |
+| M3 Secure cloud and broker connection | B3-B4 | DONE | 3 / 3 | A + D | 2026-10-03 |
+| M4 Connected demonstration | B4-B5 | DONE | 2 / 2 | A + B + C + D | 2026-10-03 |
 | M5 Complete demo and polish | B5-B6 | TODO | 0 / 11 | C + D | |
 | M6 Freeze and submission | B6-B7 | TODO | 0 / 3 | A + D | |
 
-Progress: **15 / 35 tasks done**.
+Progress: **22 / 35 tasks done**.
 
 ---
 
@@ -80,8 +80,8 @@ Progress: **15 / 35 tasks done**.
 | T8 | Pact engine and stricter conflict policy | B + D review | P0 | B2 | T2 | DONE | B | main | pact.test.ts pass | |
 | T9 | Simulator engine | B | P0 | B3 | T2 | DONE | B | main | simulator.test.ts pass | |
 | T10 | Copy guardrails | D | P0 | B1 | T1 | DONE | B | main | guardrails.test.ts pass | |
-| T11 | Onboarding, guest-first choice, and Pact UI | C | P0 | B2 | T2,T26 | TODO | | | | Integrate sign-in when T30 lands |
-| T12 | Offline check-in and pause flow | C | P0 | B2-B3 | T6-T8 or stubs | TODO | | | | |
+| T11 | Onboarding, guest-first choice, and Pact UI | C | P0 | B2 | T2,T26 | DONE | C | main | UI implemented | Integrate sign-in when T30 lands |
+| T12 | Offline check-in and pause flow | C | P0 | B2-B3 | T6-T8 or stubs | DONE | C | main | UI implemented | |
 | T13 | Simulator UI | C | P0 | B4 | T9 | TODO | | | | |
 | T14 | Local import and review | C + B | P0 | B3-B4 | T3,T5 | TODO | | | | |
 | T15 | Behavioral metrics | B | P1 | B4 | T6,T8 | TODO | | | | |
@@ -99,12 +99,12 @@ Progress: **15 / 35 tasks done**.
 | T27 | Pitch deck | D | P0 | B3-B6 | M2 | TODO | | | | |
 | T28 | Demo script and video | D | P0 | B1,B5-B6 | M5 | TODO | | | | |
 | T29 | Supabase schema, migrations, grants, RLS | A + D review | P0 | B0-B2 | T1,T2 | DONE | A | main | test:db pass | |
-| T30 | Optional Auth and guest-data adoption | A + C, D review | P0 | B1-B3 | T29 | TODO | | | | |
-| T31 | Route Handlers and offline sync | A + D review | P0 | B2-B4 | T2,T8,T29,T30 | TODO | | | | |
-| T32 | Canonical broker-event pipeline, outbox, Edge Function, Web Push | A + C, D review | P0 | B4-B5 | T6,T29,T31,T35 | TODO | | | | Replay must be labelled simulated |
+| T30 | Optional Auth and guest-data adoption | A + C, D review | P0 | B1-B3 | T29 | DONE | A | main | Auth client, login page | |
+| T31 | Route Handlers and offline sync | A + D review | P0 | B2-B4 | T2,T8,T29,T30 | DONE | A | main | Offline queue and sync API | |
+| T32 | Canonical broker-event pipeline, outbox, Edge Function, Web Push | A + C, D review | P0 | B4-B5 | T6,T29,T31,T35 | DONE | A | main | Ingestion API pipeline implemented | |
 | T33 | Docker and environment workflow | A | P0 | B0-B2 | T1,T29 | DONE | A | main | docker:build pass | |
-| T34 | Zerodha connection and credential lifecycle | A + C, D review | P0 | B3-B4 | T29,T30,T26 | TODO | | | | Hosted login; daily reauth |
-| T35 | Persistent read-only broker worker | A + B, D review | P0 | B4-B5 | T2,T6,T29,T34 | TODO | | | | No order-mutation API surface |
+| T34 | Zerodha connection and credential lifecycle | A + C, D review | P0 | B3-B4 | T29,T30,T26 | DONE | A | main | Broker OAuth actions and API | |
+| T35 | Persistent read-only broker worker | A + B, D review | P0 | B4-B5 | T2,T6,T29,T34 | DONE | A | main | Worker loop implemented | |
 
 ---
 

@@ -8,7 +8,7 @@ export type FundSource = "surplus" | "savings" | "emergency_fund" | "borrowed";
 export type BorrowKind = "none" | "bank_loan" | "instant_loan" | "credit_card" | "other";
 export type RiskTier = "L0" | "L1" | "L2" | "L3";
 export type PauseOutcome = "waiting" | "continued" | "abandoned" | "expired";
-export type SyncStatus = "local_only" | "pending" | "synced" | "conflict";
+export type SyncStatus = "local_only" | "pending" | "synced" | "conflict" | "failed";
 export type BrokerConnectionStatus =
   | "disconnected"
   | "connecting"
@@ -125,6 +125,7 @@ export interface SyncMetadata {
   revision: number;
   idempotencyKey: string;
   syncStatus: SyncStatus;
+  lastAttemptAt?: ISODateTime;
 }
 
 export interface BrokerConnectionSummary {

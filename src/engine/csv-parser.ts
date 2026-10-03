@@ -33,7 +33,7 @@ export function parseBrokerCsv(csvString: string): ParseResult {
   for (const rawRow of rawRows) {
     const row: Record<string, string> = {};
     for (const key of Object.keys(rawRow)) {
-      row[key.toLowerCase().trim().replace(/^\uFEFF/, '')] = rawRow[key];
+      row[key.toLowerCase().trim().replace(/^\uFEFF/, '')] = rawRow[key] || "";
     }
 
     // Map aliases

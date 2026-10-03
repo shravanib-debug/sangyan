@@ -57,7 +57,7 @@ export function pairFifo(parsedRows: ParsedRow[]): FifoTrade[] {
     } else {
       // Opposite side: match FIFO
       while (remainingQty > 0 && queueState.positions.length > 0) {
-        const head = queueState.positions[0];
+        const head = queueState.positions[0]!;
         const matchQty = Math.min(head.quantity, remainingQty);
         
         // Calculate PnL for the matched quantity

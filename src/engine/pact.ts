@@ -45,7 +45,7 @@ export function mergePactsStrict(pactA: Pact, pactB: Pact): Pact {
     if (mergedWindows.length === 0) {
       mergedWindows.push({ ...w });
     } else {
-      const last = mergedWindows[mergedWindows.length - 1];
+      const last = mergedWindows[mergedWindows.length - 1]!;
       if (w.startMinuteIst <= last.endMinuteIst) {
         last.endMinuteIst = Math.max(last.endMinuteIst, w.endMinuteIst);
       } else {
@@ -81,5 +81,5 @@ export function getEffectivePact(pacts: Pact[], nowEpochMs: number): Pact | null
     .filter(p => new Date(p.effectiveAt).getTime() <= nowEpochMs)
     .sort((a, b) => b.revision - a.revision); // highest revision first
 
-  return active.length > 0 ? active[0] : null;
+  return active.length > 0 ? (active[0] || null) : null;
 }
