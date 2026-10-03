@@ -1,0 +1,16 @@
+.git
+.github
+.next
+node_modules
+coverage
+playwright-report
+test-results
+.env*
+!.env.example
+*.log
+ARCHITECTURE.md
+IMPLEMENTATION_PLAN.md
+ROADMAP.md
+SPEC.md
+TASKS.md
+TRACKER.md

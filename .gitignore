@@ -1,0 +1,33 @@
+# dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# tests and reports
+coverage/
+playwright-report/
+test-results/
+.lighthouseci/
+
+# local environment; keep the documented template
+.env*
+!.env.example
+
+# local Supabase state
+supabase/.branches/
+supabase/.temp/
+
+# generated service worker
+public/sw.js
+public/sw.js.map
+public/workbox-*.js
+
+# operating systems and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.tsbuildinfo
+*.log

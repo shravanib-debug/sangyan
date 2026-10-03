@@ -1,0 +1,8 @@
+# Replace or extend these handles when all four team members join the repository.
+* @shravanib-debug
+
+/src/engine/ @shravanib-debug
+/app/api/ @shravanib-debug
+/supabase/ @shravanib-debug
+/apps/broker-worker/ @shravanib-debug
+/.github/ @shravanib-debug

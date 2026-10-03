@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --background: #f7f5ef;
+  --surface: #ffffff;
+  --foreground: #17211b;
+  --muted: #536158;
+  --primary: #175c45;
+  --primary-contrast: #ffffff;
+  --border: #d7ddd8;
+  --warning: #7a4b00;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--background);
+  font-size: 18px;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, "Noto Sans Devanagari", sans-serif;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+a.button {
+  min-height: 48px;
+  border-radius: 0.75rem;
+}
+
+:focus-visible {
+  outline: 3px solid #bc6b00;
+  outline-offset: 3px;
+}
+
+.shell {
+  width: min(100% - 2rem, 46rem);
+  margin-inline: auto;
+  padding-block: 1rem 3rem;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+  padding: 1.25rem;
+  box-shadow: 0 0.5rem 1.5rem rgb(23 33 27 / 7%);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: var(--primary);
+  color: var(--primary-contrast);
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+  text-decoration: none;
+}
+
+.button.secondary {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--foreground);
+}
+
+.stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.status-banner {
+  background: #fff0d5;
+  color: var(--warning);
+  padding: 0.75rem 1rem;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
