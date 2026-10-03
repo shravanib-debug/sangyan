@@ -22,14 +22,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
-      - run: corepack enable
-      - run: corepack prepare pnpm@12.8.1 --activate
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm check:secrets
-      - run: pnpm typecheck
-      - run: pnpm lint
-      - run: pnpm test
-      - run: pnpm build
+      - run: npm install
+      - run: npm run check:secrets
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
@@ -43,13 +41,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
-      - run: corepack enable
-      - run: corepack prepare pnpm@12.8.1 --activate
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm supabase:start
-      - run: pnpm test:db
+      - run: npm install
+      - run: npm run supabase:start
+      - run: npm run test:db
       - if: always()
-        run: pnpm supabase:stop --no-backup
+        run: npm run supabase:stop --no-backup
 
   pwa-smoke:
     name: PWA smoke and Lighthouse
@@ -60,19 +56,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
-      - run: corepack enable
-      - run: corepack prepare pnpm@12.8.1 --activate
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm build
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
-      - run: pnpm exec playwright test tests/e2e/foundation.spec.ts --project=chromium
+      - run: npx playwright test tests/e2e/foundation.spec.ts --project=chromium
         env:
           NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
-      - run: pnpm exec lhci autorun
+      - run: npx lhci autorun
         env:
           NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
