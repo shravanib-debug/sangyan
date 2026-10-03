@@ -12,7 +12,6 @@ RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
 COPY --from=dependencies /app/node_modules ./node_modules
-COPY --from=dependencies /app/apps/broker-worker/node_modules ./apps/broker-worker/node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm build

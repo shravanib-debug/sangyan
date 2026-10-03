@@ -54,7 +54,7 @@
 
 | Milestone | Target | Status | Done / total | Gate reviewer | Date |
 |---|---|---|---|---|---|
-| M0 Full-stack foundation | B0-B1 | TODO | 0 / 7 | A + D | |
+| M0 Full-stack foundation | B0-B1 | DONE | 7 / 7 | A + D | 2026-10-03 |
 | M1 Deterministic engine | B1-B3 | TODO | 0 / 7 | B + A | |
 | M2 Local walking skeleton | End B2 | TODO | 0 / 2 | C + D | |
 | M3 Secure cloud and broker connection | B3-B4 | TODO | 0 / 3 | A + D | |
@@ -62,7 +62,7 @@
 | M5 Complete demo and polish | B5-B6 | TODO | 0 / 11 | C + D | |
 | M6 Freeze and submission | B6-B7 | TODO | 0 / 3 | A + D | |
 
-Progress: **0 / 35 tasks done**.
+Progress: **7 / 35 tasks done**.
 
 ---
 
@@ -70,8 +70,8 @@ Progress: **0 / 35 tasks done**.
 
 | ID | Task | Assigned member(s) | Pri | Block | Dependencies | Status | Person | PR/branch | Evidence | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
-| T1 | Next.js full-stack scaffold | A | P0 | B0 | - | TODO | | | | |
-| T2 | Domain, API, and sync contracts | A | P0 | B0 | T1 | TODO | | | | |
+| T1 | Next.js full-stack scaffold | A | P0 | B0 | - | DONE | A | main | verify pass | |
+| T2 | Domain, API, and sync contracts | A | P0 | B0 | T1 | DONE | A | main | verify pass | |
 | T3 | CSV parser and FIFO pairing | B | P0 | B1 | T2 | TODO | | | | |
 | T4 | Synthetic personas and fixtures | B | P0 | B1 | T2 | TODO | | | | |
 | T5 | Six-signal engine | B | P0 | B2 | T3,T4 | TODO | | | | |
@@ -93,16 +93,16 @@ Progress: **0 / 35 tasks done**.
 | T21 | Performance and accessibility | C + D | P0 | B4-B5 | T12,T24 | TODO | | | | |
 | T22 | Synthetic evaluation | B | P1 | B4 | T4,T6 | TODO | | | | |
 | T23 | Deployment and submission | A + D | P0 | B6-B7 | M5 | TODO | | | | |
-| T24 | PWA manifest, SW, install, update, offline | C | P0 | B0-B2 | T1 | TODO | | | | |
-| T25 | CI and repository governance | D + A | P0 | B0 | T1 | TODO | | | | |
-| T26 | en/hi/mr i18n foundation | C | P0 | B0-B2 | T1 | TODO | | | | |
+| T24 | PWA manifest, SW, install, update, offline | C | P0 | B0-B2 | T1 | DONE | C | main | verify pass | |
+| T25 | CI and repository governance | D + A | P0 | B0 | T1 | DONE | D | main | verify pass | |
+| T26 | en/hi/mr i18n foundation | C | P0 | B0-B2 | T1 | DONE | C | main | verify pass | |
 | T27 | Pitch deck | D | P0 | B3-B6 | M2 | TODO | | | | |
 | T28 | Demo script and video | D | P0 | B1,B5-B6 | M5 | TODO | | | | |
-| T29 | Supabase schema, migrations, grants, RLS | A + D review | P0 | B0-B2 | T1,T2 | TODO | | | | |
+| T29 | Supabase schema, migrations, grants, RLS | A + D review | P0 | B0-B2 | T1,T2 | DONE | A | main | test:db pass | |
 | T30 | Optional Auth and guest-data adoption | A + C, D review | P0 | B1-B3 | T29 | TODO | | | | |
 | T31 | Route Handlers and offline sync | A + D review | P0 | B2-B4 | T2,T8,T29,T30 | TODO | | | | |
 | T32 | Canonical broker-event pipeline, outbox, Edge Function, Web Push | A + C, D review | P0 | B4-B5 | T6,T29,T31,T35 | TODO | | | | Replay must be labelled simulated |
-| T33 | Docker and environment workflow | A | P0 | B0-B2 | T1,T29 | TODO | | | | |
+| T33 | Docker and environment workflow | A | P0 | B0-B2 | T1,T29 | DONE | A | main | docker:build pass | |
 | T34 | Zerodha connection and credential lifecycle | A + C, D review | P0 | B3-B4 | T29,T30,T26 | TODO | | | | Hosted login; daily reauth |
 | T35 | Persistent read-only broker worker | A + B, D review | P0 | B4-B5 | T2,T6,T29,T34 | TODO | | | | No order-mutation API surface |
 

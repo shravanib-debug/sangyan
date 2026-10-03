@@ -7,6 +7,13 @@ export default defineConfig([
   ...nextTypescript,
   globalIgnores([".next/**", "coverage/**", "public/sw.js", "apps/broker-worker/dist/**"]),
   {
+    settings: {
+      react: {
+        version: "19.3.0"
+      }
+    }
+  },
+  {
     files: ["src/engine/**/*.ts"],
     rules: {
       "no-restricted-imports": [

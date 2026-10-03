@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 interface InstallPromptEvent extends Event {
@@ -9,24 +9,32 @@ interface InstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 }
 
+const subscribeOnline = (callback: () => void) => {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener("online", callback);
+  window.addEventListener("offline", callback);
+  return () => {
+    window.removeEventListener("online", callback);
+    window.removeEventListener("offline", callback);
+  };
+};
+
+const getOnlineSnapshot = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
+const getServerOnlineSnapshot = () => true;
+
 export function PwaBootstrap() {
   const { t } = useTranslation();
   const pathname = usePathname();
-  const [online, setOnline] = useState(true);
+  const online = useSyncExternalStore(subscribeOnline, getOnlineSnapshot, getServerOnlineSnapshot);
   const [waiting, setWaiting] = useState<ServiceWorker | null>(null);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
 
   useEffect(() => {
-    setOnline(navigator.onLine);
-    const onOnline = () => setOnline(true);
-    const onOffline = () => setOnline(false);
     const onInstallPrompt = (event: Event) => {
       event.preventDefault();
       setInstallPrompt(event as InstallPromptEvent);
     };
 
-    window.addEventListener("online", onOnline);
-    window.addEventListener("offline", onOffline);
     window.addEventListener("beforeinstallprompt", onInstallPrompt);
 
     if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
@@ -44,8 +52,6 @@ export function PwaBootstrap() {
     }
 
     return () => {
-      window.removeEventListener("online", onOnline);
-      window.removeEventListener("offline", onOffline);
       window.removeEventListener("beforeinstallprompt", onInstallPrompt);
     };
   }, []);
