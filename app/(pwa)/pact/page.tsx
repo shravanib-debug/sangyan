@@ -88,8 +88,8 @@ export default function PactPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 text-gray-900 px-4 py-8">
-      <div className="max-w-md mx-auto w-full space-y-6">
+    <div className="responsive-page flex flex-col min-h-screen text-gray-900 px-4 py-8">
+      <div className="w-full space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">{t("pact.title")}</h1>
           <p className="text-gray-500 mt-2">{t("pact.subtitle")}</p>

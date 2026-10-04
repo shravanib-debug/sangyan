@@ -43,13 +43,13 @@ export function SimulatorScreen() {
   const lossPercentages = [5, 10, 20, 50, 75, 90, 100];
 
   return (
-    <main className="space-y-6 max-w-lg mx-auto pb-12">
+    <main className="responsive-page space-y-6 pb-12">
       <header>
         <h1 className="text-2xl font-black">{t("simulator.title")}</h1>
         <p className="text-gray-600 font-medium">{t("simulator.subtitle")}</p>
       </header>
       
-      <section className={card}>
+      <section className={card + " responsive-form-layout"}>
         <div className="space-y-4">
           <div>
             <label htmlFor="simulator-principal" className="block text-sm font-bold text-gray-700">{t("simulator.principal")}</label>

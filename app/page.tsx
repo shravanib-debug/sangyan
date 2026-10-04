@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { LandingPage } from "@/features/landing/landing-page";
 
 export default function IndexPage() {
-  redirect("/home");
+  return <LandingPage />;
 }

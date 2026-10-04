@@ -110,7 +110,7 @@ export function JournalScreen() {
   };
 
   return (
-    <div className="space-y-6 max-w-lg mx-auto pb-12">
+    <div className="responsive-page narrow space-y-6 pb-12">
       <header className="space-y-2">
         <h1 className="text-2xl font-black">{t("screens.journal")}</h1>
         <p className="font-medium text-gray-600">{t("journal.subtitle")}</p>
