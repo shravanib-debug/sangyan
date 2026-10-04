@@ -35,8 +35,9 @@ export async function loadReview(
   decisionLimit: number = DECISION_LIMIT
 ): Promise<ReviewData> {
   const trades: Trade[] = (await db.trades.orderBy("timestamp").toArray()) as Trade[];
-  const pact = getEffectivePact(await db.pacts.toArray(), nowMs) ?? DEFAULT_REPLAY_PACT;
-  const flagged = replayHistory(trades, pact);
+  const savedPact = getEffectivePact(await db.pacts.toArray(), nowMs);
+  const pact = savedPact ?? DEFAULT_REPLAY_PACT;
+  const flagged = replayHistory(trades, pact, savedPact !== null);
 
   const signalCounts: ReviewData["signalCounts"] = {};
   for (const item of flagged) {

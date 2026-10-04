@@ -7,7 +7,7 @@ export type BrokerProvider = "zerodha" | "angel_one";
 export type FundSource = "surplus" | "savings" | "emergency_fund" | "borrowed";
 export type BorrowKind = "none" | "bank_loan" | "instant_loan" | "credit_card" | "other";
 export type RiskTier = "L0" | "L1" | "L2" | "L3";
-export type PauseOutcome = "waiting" | "continued" | "abandoned" | "expired";
+export type PauseOutcome = "waiting" | "continued" | "skipped_pause" | "abandoned" | "expired";
 export type SyncStatus = "local_only" | "pending" | "synced" | "conflict" | "failed";
 export type BrokerConnectionStatus =
   | "disconnected"
@@ -152,6 +152,8 @@ export interface Rng {
 export interface WorkerDetectRequest {
   history: Trade[];
   pact: Pact;
+  /** True only when the Pact came from an explicit user save, never from fallback defaults. */
+  pactCommitted: boolean;
   checkIn?: Pick<CheckIn, "amountPaise" | "fundSource" | "borrowKind" | "timestamp">;
   nowEpochMs: number;
   config: EngineConfig;

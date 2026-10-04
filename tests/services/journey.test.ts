@@ -105,7 +105,7 @@ describe("check-in and pause (offline, local-first)", () => {
   });
 
   it("gives borrowed money a 2-minute pause with an explanation of why", async () => {
-    await savePact(form, pactDeps());
+    await savePact({ ...form, blockBorrowedFunds: false }, pactDeps());
     const outcome = await runCheckIn(
       { ...input, source: "borrowed", borrowKind: "instant_loan" },
       checkInDeps()
@@ -117,10 +117,28 @@ describe("check-in and pause (offline, local-first)", () => {
     const hit = view!.assessment.signalHits.find((candidate) => candidate.signal === "money_source");
     expect(hit).toBeDefined();
     expect(view!.assessment.hardRuleOverrides).toContain("money_source_borrowed");
+    expect(view!.assessment.hardRuleOverrides).not.toContain("pact_breach_lock");
 
     const description = describeHit(hit!);
     expect(description.key).toBe("signal.source.triggered");
     expect(description.observedKey).toBe("signal.sourceName.borrowed");
+  });
+
+  it("enforces a saved source-blocking Pact switch but never a fallback default", async () => {
+    const withoutPact = await runCheckIn(
+      { ...input, source: "borrowed", borrowKind: "instant_loan" },
+      checkInDeps()
+    );
+    expect(withoutPact.tier).toBe("L2");
+
+    await savePact(form, pactDeps());
+    const committed = await runCheckIn(
+      { ...input, source: "borrowed", borrowKind: "instant_loan" },
+      checkInDeps()
+    );
+    const view = await loadLocalPause(db, committed.pauseId);
+    expect(committed.tier).toBe("L3");
+    expect(view?.assessment.hardRuleOverrides).toContain("pact_breach_lock");
   });
 
   it("materially changes the complete persisted flow for a high-risk re-entry", async () => {
@@ -203,6 +221,18 @@ describe("check-in and pause (offline, local-first)", () => {
     expect(view?.pause.revision).toBe(1);
     expect(queued).toHaveLength(1);
     expect(pauseSyncSchema.parse(queued[0]?.payload).revision).toBe(1);
+  });
+
+  it("persists and queues an explicitly skipped L1/L2 pause", async () => {
+    const outcome = await runCheckIn({ ...input, source: "borrowed", borrowKind: "bank_loan" }, checkInDeps());
+    expect(outcome.tier).toBe("L2");
+    queued.length = 0;
+
+    await resolvePause(outcome.pauseId, "skipped_pause", { db, enqueue });
+
+    const view = await loadLocalPause(db, outcome.pauseId);
+    expect(view?.pause.outcome).toBe("skipped_pause");
+    expect(pauseSyncSchema.parse(queued[0]?.payload).outcome).toBe("skipped_pause");
   });
 
   it("keeps check-ins fully local until sync is enabled (the queue is just pending items)", async () => {

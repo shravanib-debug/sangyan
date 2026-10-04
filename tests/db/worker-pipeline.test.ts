@@ -108,7 +108,7 @@ describe("worker to database, end to end (replay mode)", () => {
     // The re-entry after a loss raised a pause with explanation and exactly one logical notification.
     const pauses = (await db.query<{ id: string; tier: string }>("select id, tier from public.pause_events where user_id = $1", [userId])).rows;
     expect(pauses.length).toBeGreaterThanOrEqual(1);
-    expect(pauses.some((pause) => pause.tier === "L3")).toBe(true);
+    expect(pauses.some((pause) => pause.tier === "L1")).toBe(true);
     const outbox = (await db.query<{ aggregate_id: string }>("select aggregate_id from public.outbox_events where user_id = $1", [userId])).rows;
     expect(outbox.map((row) => row.aggregate_id).sort()).toEqual(pauses.map((pause) => pause.id).sort());
 

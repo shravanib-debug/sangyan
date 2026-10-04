@@ -16,7 +16,13 @@ function sign(body: string, timestamp = Date.now()) {
 }
 
 test.describe("cookie-authenticated mutations", () => {
-  for (const path of ["/api/sync", "/api/consents", "/api/brokers/zerodha/disconnect", "/api/push/subscriptions"]) {
+  for (const path of [
+    "/api/sync",
+    "/api/consents",
+    "/api/account/delete",
+    "/api/brokers/zerodha/disconnect",
+    "/api/push/subscriptions"
+  ]) {
     test(`POST ${path} rejects a cross-origin request`, async ({ request }) => {
       const response = await request.post(path, { data: {}, headers: { Origin: "https://evil.example" } });
       expect(response.status()).toBe(403);
@@ -25,6 +31,14 @@ test.describe("cookie-authenticated mutations", () => {
       expect((await request.post(path, { data: {} })).status()).toBe(403);
     });
   }
+
+  test("account deletion rejects the same host over a different scheme", async ({ request }) => {
+    const response = await request.post("/api/account/delete", {
+      data: {},
+      headers: { Origin: "https://127.0.0.1:3100" }
+    });
+    expect(response.status()).toBe(403);
+  });
 
   test("sync requires a signed-in user", async ({ request }) => {
     const response = await request.post("/api/sync", { data: { items: [] }, headers: sameOrigin });

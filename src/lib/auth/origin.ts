@@ -3,8 +3,15 @@ export function isSameOrigin(request: { headers: Headers; url: string }): boolea
   const origin = request.headers.get("origin");
   if (!origin) return false;
   try {
-    const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? new URL(request.url).host;
-    return new URL(origin).host === host;
+    const requestUrl = new URL(request.url);
+    const host = (request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? requestUrl.host)
+      .split(",")[0]!
+      .trim();
+    const protocol = (request.headers.get("x-forwarded-proto") ?? requestUrl.protocol)
+      .split(",")[0]!
+      .trim()
+      .replace(/:$/, "");
+    return new URL(origin).origin === `${protocol}://${host}`;
   } catch {
     return false;
   }

@@ -105,6 +105,7 @@ async function syncCheckIn(context: SyncContext, item: SyncItemInput): Promise<S
   const result = evaluateRisk({
     history: tradesFromEvents((historyRows ?? []) as TradeEventRow[]),
     pact: pactState.effective ?? DEFAULT_PACT,
+    pactCommitted: pactState.effective !== null,
     checkIn: {
       amountPaise: checkIn.amountPaise,
       fundSource: checkIn.fundSource,

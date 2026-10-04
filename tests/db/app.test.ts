@@ -250,9 +250,16 @@ describe("sync: check-ins and pauses", () => {
     await processSyncItem(context(), { id: `pause-${pause.id}-r1`, entityType: "pause", payload: { ...pause, outcome: "abandoned", revision: 1 } });
     expect(await stored()).toMatchObject({ outcome: "abandoned" });
 
+    await processSyncItem(context(), {
+      id: `pause-${pause.id}-r2`,
+      entityType: "pause",
+      payload: { ...pause, outcome: "skipped_pause", revision: 2 }
+    });
+    expect(await stored()).toMatchObject({ outcome: "skipped_pause", revision: 2 });
+
     // A late, stale update must not roll the decision back.
     await processSyncItem(context(), { id: `pause-${pause.id}-r0b`, entityType: "pause", payload: { ...pause, outcome: "continued", revision: 0 } });
-    expect(await stored()).toMatchObject({ outcome: "abandoned" });
+    expect(await stored()).toMatchObject({ outcome: "skipped_pause", revision: 2 });
     expect(await rowCount("pause_events", userId)).toBe(1);
   });
 
@@ -318,7 +325,7 @@ describe("broker event pipeline (M4)", () => {
 
     expect(buy).toMatchObject({ kind: "created", pause: null });
     expect(loss.kind).toBe("created");
-    expect(reentry).toMatchObject({ kind: "created", tier: "L3" });
+    expect(reentry).toMatchObject({ kind: "created", tier: "L1" });
     expect(await rowCount("trade_events", userId)).toBe(3);
     expect(await rowCount("pause_events", userId)).toBeGreaterThanOrEqual(1);
 

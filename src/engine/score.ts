@@ -43,17 +43,25 @@ export function evaluateRisk(request: WorkerDetectRequest): RiskResult {
     }
   }
 
-  // Check pact breaches for hard rules (breach of pact is an automatic lock if lockOnBreach is true, 
-  // but in SPEC.md L3 is enforced if pre-committed).
-  // If the user hit a breach signal, we check pact
-  if (hits.some(h => h.signal === "pact_breach")) {
-    // A pact breach is highly dangerous. 
+  const sourceBlockedByPact = Boolean(
+    request.pactCommitted &&
+      request.checkIn &&
+      ((request.checkIn.fundSource === "borrowed" && request.pact.blockBorrowedFunds) ||
+        (request.checkIn.fundSource === "emergency_fund" && request.pact.blockEmergencyFunds))
+  );
+  const committedPactBreach =
+    request.pactCommitted && (sourceBlockedByPact || hits.some((hit) => hit.signal === "pact_breach"));
+
+  // L3 is an enforcement tier, so it requires a breached rule from a Pact the user
+  // explicitly saved. Fallback defaults can still inform and pause, but never lock.
+  if (committedPactBreach) {
     hardRuleTier = "L3";
     overrides.push("pact_breach_lock");
   }
 
   // Final tier is max of score tier and hard rule tier
-  const finalTier = hardRuleTier > tierFromScore ? hardRuleTier : tierFromScore;
+  let finalTier = hardRuleTier > tierFromScore ? hardRuleTier : tierFromScore;
+  if (finalTier === "L3" && !committedPactBreach) finalTier = "L2";
 
   return {
     assessmentId: crypto.randomUUID ? crypto.randomUUID() : "test-id", // basic polyfill for testing

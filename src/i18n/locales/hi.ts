@@ -279,6 +279,7 @@ export const hi = {
     outcome: {
       waiting: "विराम अभी जारी",
       continued: "आपने आगे बढ़ना चुना",
+      skipped_pause: "आपने विराम छोड़कर आगे बढ़ना चुना",
       abandoned: "आप पीछे हट गए",
       expired: "विराम समाप्त हुआ"
     },

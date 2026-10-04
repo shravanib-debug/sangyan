@@ -118,7 +118,7 @@ export const pauseSyncSchema = z
     tier: z.enum(["L0", "L1", "L2", "L3"]),
     startedAt: isoDateTimeSchema,
     expiresAt: isoDateTimeSchema.nullable().optional(),
-    outcome: z.enum(["waiting", "continued", "abandoned", "expired"]),
+    outcome: z.enum(["waiting", "continued", "skipped_pause", "abandoned", "expired"]),
     revision: z.number().int().nonnegative().default(0)
   })
   .strict();

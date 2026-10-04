@@ -25,13 +25,18 @@ export const DEFAULT_REPLAY_PACT: Pact = {
  * Retrospective replay: runs the shared detector as of each trade, over the history up to
  * and including it. Returns only the trades where at least one signal fired, oldest first.
  */
-export function replayHistory<T extends Trade>(trades: readonly T[], pact: Pact): FlaggedTrade<T>[] {
+export function replayHistory<T extends Trade>(
+  trades: readonly T[],
+  pact: Pact,
+  pactCommitted: boolean
+): FlaggedTrade<T>[] {
   const flagged: FlaggedTrade<T>[] = [];
   const historySoFar: T[] = [];
   for (const trade of trades) {
     historySoFar.push(trade);
     const hits = evaluateSignals({
       pact,
+      pactCommitted,
       history: historySoFar,
       nowEpochMs: new Date(trade.timestamp).getTime(),
       checkIn: undefined,

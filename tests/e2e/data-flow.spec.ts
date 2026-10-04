@@ -4,7 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 async function submitCheckIn(
   page: Page,
-  input: { amount: string; source: "surplus" | "borrowed"; reason: string; exit: string }
+  input: { amount: string; source: "surplus" | "savings" | "borrowed" | "emergency"; reason: string; exit: string }
 ) {
   await page.goto("/checkin");
   await page.getByLabel("Trade amount (INR)").fill(input.amount);
@@ -60,7 +60,7 @@ test("check-in, import, pause, review and journal use the submitted and persiste
   const upload = page.locator('input[type="file"]');
   const sample = readFileSync("fixtures/synthetic_revenge.csv", "utf8");
   await upload.setInputFiles({ name: "synthetic_revenge.csv", mimeType: "text/csv", buffer: Buffer.from(sample) });
-  await expect(page.getByText("2 / 3 trades flagged")).toBeVisible();
+  await expect(page.getByText("1 / 3 trades flagged")).toBeVisible();
   await expect(page.getByText(/Quick follow-up after a loss: Observed 5 minutes/)).toBeVisible();
 
   const withoutReentry = sample
@@ -68,7 +68,7 @@ test("check-in, import, pause, review and journal use the submitted and persiste
     .filter((row) => !row.startsWith("INFY,Buy,200,"))
     .join("\n");
   await upload.setInputFiles({ name: "without_reentry.csv", mimeType: "text/csv", buffer: Buffer.from(withoutReentry) });
-  await expect(page.getByText("1 / 2 trades flagged")).toBeVisible();
+  await expect(page.getByText("0 / 2 trades flagged")).toBeVisible();
   await expect(page.getByText(/Quick follow-up after a loss: Observed 5 minutes/)).toHaveCount(0);
 
   const now = fixedNoon.getTime();
@@ -86,12 +86,12 @@ test("check-in, import, pause, review and journal use the submitted and persiste
   await submitCheckIn(page, { amount: "25000", source: "borrowed", reason: highReason, exit: highExit });
 
   const highPauseText = await page.locator("main, body").innerText();
-  expect(highPauseText).toContain("L3 ·");
+  expect(highPauseText).toContain("L2 ·");
   const highScore = scoreFrom(highPauseText);
   expect(highScore).toBeGreaterThan(scoreFrom(lowPauseText));
   expect(highPauseText).toContain("Money source: borrowed money");
   expect(highPauseText).toContain("after a loss");
-  expect(highPauseText).toContain("Pact cooldown");
+  expect(highPauseText).not.toContain("Pact cooldown");
   await expect(page.getByRole("timer")).toBeVisible();
 
   await page.getByRole("button", { name: "Step away (Good call)" }).click();
@@ -100,13 +100,80 @@ test("check-in, import, pause, review and journal use the submitted and persiste
   await page.goto("/review");
   await expect(page.getByText(highReason)).toBeVisible();
   await expect(page.getByText(highExit)).toBeVisible();
-  await expect(page.getByText(/Pause level 3 · You stepped away/)).toBeVisible();
+  await expect(page.getByText(/Pause level 2 · You stepped away/)).toBeVisible();
 
   await page.goto("/journal");
   await expect(page.getByText(highReason)).toBeVisible();
   await expect(page.getByText("₹25,000")).toBeVisible();
-  await expect(page.getByText(`Score ${highScore} of 100 · Pause level 3`)).toBeVisible();
+  await expect(page.getByText(`Score ${highScore} of 100 · Pause level 2`)).toBeVisible();
   await expect(page.getByText("You stepped away")).toBeVisible();
+});
+
+test("onboarding persists Hindi and Marathi locales across reloads", async ({ page }) => {
+  await page.goto("/onboarding");
+  await page.getByRole("button", { name: "हिंदी" }).click();
+
+  await expect(page.locator("html")).toHaveAttribute("lang", "hi");
+  await expect(page.getByRole("heading", { name: "गोपनीयता और सीमाएँ" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("thehrav.locale"))).toBe("hi");
+
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("lang", "hi");
+  await expect(page.getByRole("heading", { name: "अपनी भाषा चुनें" })).toBeVisible();
+
+  await page.getByRole("button", { name: "मराठी" }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "mr");
+  await expect(page.getByRole("heading", { name: "गोपनीयता आणि मर्यादा" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("thehrav.locale"))).toBe("mr");
+
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("lang", "mr");
+  await expect(page.getByRole("heading", { name: "तुमची भाषा निवडा" })).toBeVisible();
+});
+
+test("L1 and L2 pauses can be skipped while L3 requires an explicit matching Pact", async ({ page }) => {
+  await submitCheckIn(page, {
+    amount: "1000",
+    source: "savings",
+    reason: "Planned savings check",
+    exit: "Written savings stop"
+  });
+  await expect(page.getByText("L1 ·")).toBeVisible();
+  await expect(page.getByRole("timer")).toBeVisible();
+  await page.getByRole("button", { name: "I understand, continue anyway" }).click();
+  await page.waitForURL("**/home");
+  await page.goto("/review");
+  await expect(page.getByText(/Pause level 1 · You skipped the pause/)).toBeVisible();
+
+  await page.goto("/pact");
+  await page.getByLabel("Block borrowed funds").uncheck();
+  await page.getByRole("button", { name: "Save Pact" }).click();
+  await expect(page.getByText("Saved. Your tighter rules apply now.")).toBeVisible();
+
+  await submitCheckIn(page, {
+    amount: "2000",
+    source: "borrowed",
+    reason: "Borrowed check without source block",
+    exit: "Written borrowed stop"
+  });
+  await expect(page.getByText("L2 ·")).toBeVisible();
+  await expect(page.getByRole("button", { name: "I understand, continue anyway" })).toBeVisible();
+  await page.getByRole("button", { name: "I understand, continue anyway" }).click();
+  await page.waitForURL("**/home");
+
+  await page.goto("/pact");
+  await page.getByLabel("Block borrowed funds").check();
+  await page.getByRole("button", { name: "Save Pact" }).click();
+  await expect(page.getByText("Saved. Your tighter rules apply now.")).toBeVisible();
+
+  await submitCheckIn(page, {
+    amount: "2000",
+    source: "borrowed",
+    reason: "Borrowed check with explicit source block",
+    exit: "Written committed stop"
+  });
+  await expect(page.getByText("L3 ·")).toBeVisible();
+  await expect(page.getByRole("button", { name: "I understand, continue anyway" })).toHaveCount(0);
 });
 
 test("simulator inputs drive cohort outputs while recovery math remains fixed", async ({ page }) => {

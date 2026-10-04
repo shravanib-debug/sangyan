@@ -74,7 +74,7 @@ describe("broker event assessment", () => {
     expect(result.pause).toBeNull();
   });
 
-  it("explains a larger re-entry right after a loss and locks until the cooldown", () => {
+  it("explains a larger re-entry without enforcing a fallback Pact", () => {
     const outcome = assessBrokerEvent({
       event: toEvent(reentry),
       history: [buy, loss],
@@ -83,9 +83,9 @@ describe("broker event assessment", () => {
     });
     const signals = outcome.result.signalHits.map((hit) => hit.signal);
     expect(signals).toContain("revenge");
-    expect(signals).toContain("pact_breach");
-    expect(outcome.result.tier).toBe("L3");
-    expect(outcome.pause?.expiresAt).toBe(iso(30 + 30 * 60));
+    expect(signals).not.toContain("pact_breach");
+    expect(outcome.result.tier).toBe("L1");
+    expect(outcome.pause?.expiresAt).toBeNull();
     // I8: every hit carries value, threshold and a non-zero contribution.
     for (const hit of outcome.result.signalHits) {
       expect(hit.threshold).toBeDefined();

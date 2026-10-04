@@ -46,7 +46,7 @@ test("the whole manual journey runs offline after the first load", async ({ page
   await expect(page.getByText("Saved. Your looser rules apply after 24 hours.")).toBeVisible();
   await expect(page.getByText(/Loosening in 23h/)).toBeVisible();
 
-  // Check-in with borrowed money: an explainable 2-minute pause, no network needed.
+  // Check-in with borrowed money: the explicitly saved source block creates an L3 Pact lock.
   await page.getByRole("link", { name: "Go to check-in" }).click();
   await page.getByLabel("Trade amount (INR)").fill("25000");
   await page.getByLabel("Money source").selectOption("borrowed");
@@ -56,16 +56,16 @@ test("the whole manual journey runs offline after the first load", async ({ page
   await page.getByRole("button", { name: "Evaluate Decision" }).click();
 
   await expect(page.getByRole("heading", { name: "Cooling-off Pause" })).toBeVisible();
-  await expect(page.getByText("L2 ·")).toBeVisible();
+  await expect(page.getByText("L3 ·")).toBeVisible();
   await expect(page.getByText("Money source: borrowed money")).toBeVisible();
   await expect(page.getByText("Rule applied: borrowed money always gets at least a 2-minute pause.")).toBeVisible();
-  await expect(page.getByRole("timer")).toContainText("Wait 1");
+  await expect(page.getByRole("timer")).toContainText("Locked by your Pact");
   await expect(page.getByRole("button", { name: "I understand, continue anyway" })).toHaveCount(0);
   await expect(page.getByText("cannot block an order")).toBeVisible();
 
   // A reload must not reset the countdown: it derives from the stored expiry.
   await page.reload();
-  await expect(page.getByRole("timer")).toContainText(/Wait (1\d\d|[1-9]\d?)s/);
+  await expect(page.getByRole("timer")).toContainText(/Locked by your Pact for 2\dm/);
 
   // The decision is recorded locally and queued for later sync.
   await page.getByRole("button", { name: "Step away (Good call)" }).click();

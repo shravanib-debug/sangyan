@@ -59,7 +59,7 @@ function PauseScreen() {
     return () => clearInterval(timer);
   }, [state]);
 
-  const decide = async (outcome: "continued" | "abandoned") => {
+  const decide = async (outcome: "continued" | "skipped_pause" | "abandoned") => {
     if (view) {
       await resolvePause(view.pause.id, outcome, {
         db: localDatabase,
@@ -130,8 +130,16 @@ function PauseScreen() {
                 {t("pause.lockRemaining", { minutes: Math.floor(seconds / 60), seconds: seconds % 60 })}
               </div>
             ) : waiting ? (
-              <div role="timer" className="p-4 bg-gray-200 text-gray-900 text-center rounded-xl font-bold tabular-nums">
-                {t("pause.timer", { seconds })}
+              <div className="space-y-4">
+                <div role="timer" className="p-4 bg-gray-200 text-gray-900 text-center rounded-xl font-bold tabular-nums">
+                  {t("pause.timer", { seconds })}
+                </div>
+                <button
+                  onClick={() => void decide("skipped_pause")}
+                  className="w-full p-4 bg-white border-2 border-gray-300 text-gray-900 rounded-xl font-bold hover:bg-gray-50 transition-colors"
+                >
+                  {t("pause.continue")}
+                </button>
               </div>
             ) : (
               <button

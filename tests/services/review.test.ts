@@ -44,7 +44,8 @@ describe("review service", () => {
     const review = await loadReview(db, NOON);
     const expected = replayHistory(
       [...trades].sort((a, b) => a.timestamp.localeCompare(b.timestamp)),
-      DEFAULT_REPLAY_PACT
+      DEFAULT_REPLAY_PACT,
+      false
     );
 
     expect(review.totalTrades).toBe(trades.length);

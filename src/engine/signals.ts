@@ -1,6 +1,15 @@
 import { Trade, Pact, SignalHit, WorkerDetectRequest } from "./types";
 import { evaluateMoneySource } from "./triage";
 
+const MINUTE_MS = 60_000;
+const DAY_MS = 24 * 60 * MINUTE_MS;
+const IST_OFFSET_MS = 330 * MINUTE_MS;
+
+/** UTC epoch for midnight in Asia/Kolkata on the day containing `nowEpochMs`. */
+export function startOfIstDay(nowEpochMs: number): number {
+  return Math.floor((nowEpochMs + IST_OFFSET_MS) / DAY_MS) * DAY_MS - IST_OFFSET_MS;
+}
+
 /**
  * Revenge: New position within 15 minutes of a loss, size at least 1.5x, prior loss above configured minimum
  */
@@ -139,9 +148,7 @@ export function detectLossHold(trades: Trade[]): SignalHit | null {
  * Breach: Violates daily loss, trade count, cooldown, etc.
  */
 export function detectBreach(trades: Trade[], pact: Pact, nowEpochMs: number): SignalHit | null {
-  const startOfDay = new Date(nowEpochMs);
-  startOfDay.setUTCHours(0, 0, 0, 0); // Simplified day boundary
-  const dayMs = startOfDay.getTime();
+  const dayMs = startOfIstDay(nowEpochMs);
 
   const todayTrades = trades.filter(t => new Date(t.timestamp).getTime() >= dayMs);
   
@@ -227,7 +234,7 @@ export function evaluateSignals(request: WorkerDetectRequest): SignalHit[] {
   const lossHold = detectLossHold(request.history);
   if (lossHold) hits.push(lossHold);
 
-  const breach = detectBreach(request.history, request.pact, request.nowEpochMs);
+  const breach = request.pactCommitted ? detectBreach(request.history, request.pact, request.nowEpochMs) : null;
   if (breach) hits.push(breach);
 
   const source = detectSource(request);

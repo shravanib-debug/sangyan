@@ -279,6 +279,7 @@ export const mr = {
     outcome: {
       waiting: "विराम अजून सुरू",
       continued: "तुम्ही पुढे जाण्याचे ठरवले",
+      skipped_pause: "तुम्ही विराम वगळून पुढे जाण्याचे ठरवले",
       abandoned: "तुम्ही मागे हटलात",
       expired: "विराम संपला"
     },

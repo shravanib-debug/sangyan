@@ -66,6 +66,7 @@ export function assessBrokerEvent(input: {
   const result = evaluateRisk({
     history: trades,
     pact,
+    pactCommitted: input.pact !== null,
     nowEpochMs,
     config: DEFAULT_ENGINE_CONFIG
   });

@@ -31,11 +31,12 @@ export async function importBrokerCsvHistory(
   });
 
   const persistedTrades = (await db.trades.where("source").equals("csv").sortBy("timestamp")) as FifoTrade[];
-  const pact = getEffectivePact(await db.pacts.toArray(), nowMs) ?? DEFAULT_REPLAY_PACT;
+  const savedPact = getEffectivePact(await db.pacts.toArray(), nowMs);
+  const pact = savedPact ?? DEFAULT_REPLAY_PACT;
 
   return {
     trades: persistedTrades,
-    flaggedTrades: replayHistory(persistedTrades, pact),
+    flaggedTrades: replayHistory(persistedTrades, pact, savedPact !== null),
     droppedRows: parsed.droppedRows,
     parseErrors: parsed.errors
   };

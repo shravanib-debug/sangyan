@@ -3,15 +3,17 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
+import { setLocale } from "@/i18n/provider";
+import type { SupportedLocale } from "@/i18n/resources";
 import { localDatabase } from "@/storage/local/database";
 
 export default function OnboardingPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const router = useRouter();
   const [step, setStep] = useState<number>(0);
 
-  const handleLanguageSelect = (lang: string) => {
-    i18n.changeLanguage(lang);
+  const handleLanguageSelect = async (lang: SupportedLocale) => {
+    await setLocale(lang);
     setStep(1);
   };
 
@@ -31,9 +33,9 @@ export default function OnboardingPage() {
           <div className="space-y-6 animate-in fade-in">
             <h1 className="text-2xl font-bold text-center">{t("onboarding.languageTitle")}</h1>
             <div className="grid gap-4">
-              <button onClick={() => handleLanguageSelect('en')} className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-blue-500 hover:ring-1 hover:ring-blue-500 transition-all font-medium">English</button>
-              <button onClick={() => handleLanguageSelect('hi')} className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-blue-500 hover:ring-1 hover:ring-blue-500 transition-all font-medium">हिंदी</button>
-              <button onClick={() => handleLanguageSelect('mr')} className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-blue-500 hover:ring-1 hover:ring-blue-500 transition-all font-medium">मराठी</button>
+              <button onClick={() => void handleLanguageSelect('en')} className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-blue-500 hover:ring-1 hover:ring-blue-500 transition-all font-medium">English</button>
+              <button onClick={() => void handleLanguageSelect('hi')} className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-blue-500 hover:ring-1 hover:ring-blue-500 transition-all font-medium">हिंदी</button>
+              <button onClick={() => void handleLanguageSelect('mr')} className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-blue-500 hover:ring-1 hover:ring-blue-500 transition-all font-medium">मराठी</button>
             </div>
           </div>
         )}

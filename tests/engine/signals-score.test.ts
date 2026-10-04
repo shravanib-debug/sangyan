@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { evaluateRisk } from "../../src/engine/score";
+import { detectBreach, startOfIstDay } from "../../src/engine/signals";
 import { Trade, Pact, WorkerDetectRequest } from "../../src/engine/types";
 import { DEFAULT_ENGINE_CONFIG } from "../../src/config/defaults";
 
@@ -16,9 +17,16 @@ describe("Six-signal engine & Risk Score", () => {
     effectiveAt: new Date().toISOString()
   };
 
-  const createRequest = (history: Trade[], now: number, checkIn?: Partial<WorkerDetectRequest["checkIn"]>): WorkerDetectRequest => ({
+  const createRequest = (
+    history: Trade[],
+    now: number,
+    checkIn?: Partial<WorkerDetectRequest["checkIn"]>,
+    pactCommitted = true,
+    pact = basePact
+  ): WorkerDetectRequest => ({
     history,
-    pact: basePact,
+    pact,
+    pactCommitted,
     checkIn: checkIn as WorkerDetectRequest["checkIn"],
     nowEpochMs: now,
     config: DEFAULT_ENGINE_CONFIG
@@ -112,7 +120,7 @@ describe("Six-signal engine & Risk Score", () => {
     expect(result.hardRuleOverrides).toContain("pact_breach_lock");
   });
 
-  it("applies hard rule overrides for borrowed money", () => {
+  it("keeps the universal borrowed-money pause when the Pact switch is off", () => {
     const now = new Date("2026-10-03T10:00:00Z").getTime();
     const result = evaluateRisk(
       createRequest([], now, {
@@ -120,12 +128,87 @@ describe("Six-signal engine & Risk Score", () => {
         fundSource: "borrowed",
         borrowKind: "bank_loan",
         timestamp: new Date(now).toISOString()
-      })
+      }, true, { ...basePact, blockBorrowedFunds: false })
     );
     
     // Score is just 0.25 from source, which is L1. But borrowed hard rule is L2.
     expect(result.score).toBe(0.25);
     expect(result.tier).toBe("L2");
     expect(result.hardRuleOverrides).toContain("money_source_borrowed");
+    expect(result.hardRuleOverrides).not.toContain("pact_breach_lock");
+  });
+
+  it("makes the Pact source switches change enforcement only after explicit commitment", () => {
+    const now = new Date("2026-10-03T10:00:00Z").getTime();
+    const borrowed = {
+      amountPaise: 100000,
+      fundSource: "borrowed" as const,
+      borrowKind: "bank_loan" as const,
+      timestamp: new Date(now).toISOString()
+    };
+    const emergency = { ...borrowed, fundSource: "emergency_fund" as const, borrowKind: "none" as const };
+
+    expect(evaluateRisk(createRequest([], now, borrowed, true, { ...basePact, blockBorrowedFunds: false })).tier).toBe("L2");
+    expect(evaluateRisk(createRequest([], now, borrowed, true, { ...basePact, blockBorrowedFunds: true })).tier).toBe("L3");
+    expect(evaluateRisk(createRequest([], now, emergency, true, { ...basePact, blockEmergencyFunds: false })).tier).toBe("L1");
+    expect(evaluateRisk(createRequest([], now, emergency, true, { ...basePact, blockEmergencyFunds: true })).tier).toBe("L3");
+
+    const defaultOnly = evaluateRisk(createRequest([], now, borrowed, false, { ...basePact, blockBorrowedFunds: true }));
+    expect(defaultOnly.tier).toBe("L2");
+    expect(defaultOnly.hardRuleOverrides).not.toContain("pact_breach_lock");
+  });
+
+  it("never turns fallback defaults into an L3 lock, even when the score reaches L3", () => {
+    const lossTime = new Date("2026-10-03T10:00:00Z").getTime();
+    const history: Trade[] = [
+      {
+        id: "loss",
+        timestamp: new Date(lossTime).toISOString(),
+        symbol: "INFY",
+        side: "sell",
+        quantity: 10,
+        pricePaise: 150000,
+        pnlPaise: -20000,
+        source: "synthetic"
+      }
+    ];
+    const result = evaluateRisk(
+      createRequest(
+        history,
+        lossTime + 5 * 60_000,
+        {
+          amountPaise: 3_000_000,
+          fundSource: "borrowed",
+          borrowKind: "instant_loan",
+          timestamp: new Date(lossTime + 5 * 60_000).toISOString()
+        },
+        false
+      )
+    );
+
+    expect(result.score).toBe(0.5);
+    expect(result.tier).toBe("L2");
+    expect(result.hardRuleOverrides).not.toContain("pact_breach_lock");
+  });
+
+  it("uses midnight IST, not midnight UTC, for daily Pact limits", () => {
+    const now = new Date("2026-10-03T20:00:00.000Z").getTime(); // 01:30 IST on 4 Oct
+    expect(new Date(startOfIstDay(now)).toISOString()).toBe("2026-10-03T18:30:00.000Z");
+
+    const pact = { ...basePact, maximumTradesPerDay: 100, dailyLossLimitPaise: 500_000 };
+    const previousIstDay: Trade = {
+      id: "previous-day",
+      timestamp: "2026-10-03T17:00:00.000Z", // 22:30 IST on 3 Oct
+      symbol: "INFY",
+      side: "sell",
+      quantity: 1,
+      pricePaise: 100,
+      pnlPaise: -600_000,
+      source: "synthetic"
+    };
+    const currentIstDay = { ...previousIstDay, id: "current-day", timestamp: "2026-10-03T19:00:00.000Z" };
+
+    expect(detectBreach([previousIstDay], pact, now)).toBeNull();
+    expect(detectBreach([currentIstDay], pact, now)?.explanationCode).toBe("signal.breach.daily_loss");
   });
 });

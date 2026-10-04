@@ -82,6 +82,7 @@ export async function runCheckIn(input: CheckInInput, deps: CheckInDeps): Promis
   const result = evaluateRisk({
     history,
     pact: effectivePact,
+    pactCommitted: Boolean(pact),
     checkIn,
     nowEpochMs: nowMs,
     config: DEFAULT_ENGINE_CONFIG

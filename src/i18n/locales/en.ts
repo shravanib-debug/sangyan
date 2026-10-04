@@ -279,6 +279,7 @@ export const en = {
     outcome: {
       waiting: "Pause still waiting",
       continued: "You continued",
+      skipped_pause: "You skipped the pause",
       abandoned: "You stepped away",
       expired: "Pause expired"
     },
