@@ -4,7 +4,12 @@ import { evaluateMoneySource } from "./triage";
 /**
  * Revenge: New position within 15 minutes of a loss, size at least 1.5x, prior loss above configured minimum
  */
-export function detectRevenge(trades: Trade[], nowEpochMs: number, minLossPaise: number = 10000): SignalHit | null {
+export function detectRevenge(
+  trades: Trade[],
+  nowEpochMs: number,
+  proposedAmountPaise?: number,
+  minLossPaise: number = 10000
+): SignalHit | null {
   // Find the most recent closed trade with a loss
   let lastLoss: Trade | null = null;
   for (let i = trades.length - 1; i >= 0; i--) {
@@ -20,18 +25,17 @@ export function detectRevenge(trades: Trade[], nowEpochMs: number, minLossPaise:
   const lossTs = new Date(lastLoss.timestamp).getTime();
   const diffMinutes = (nowEpochMs - lossTs) / 60000;
 
-  if (diffMinutes <= 15) {
-    // Check if there is a newer trade representing the "revenge" position with >= 1.5x size
-    // For a real-time system, the new event is what triggers this, or the pending order.
-    // We assume `trades` includes the new trade at the end, or we just look for any trade after the loss.
+  if (diffMinutes >= 0 && diffMinutes <= 15) {
+    // A broker/import evaluation includes the new trade in history. A manual check-in
+    // instead supplies its proposed notional amount, which is compared with the losing
+    // trade's notional value so the form's amount reaches the same detector rule.
     const subsequentTrades = trades.filter(t => new Date(t.timestamp).getTime() > lossTs);
     const largeTrades = subsequentTrades.filter(t => t.quantity >= (lastLoss!.quantity * 1.5));
+    const lastLossNotionalPaise = lastLoss.quantity * lastLoss.pricePaise;
+    const proposedPositionIsLarge =
+      proposedAmountPaise !== undefined && proposedAmountPaise >= lastLossNotionalPaise * 1.5;
 
-    if (largeTrades.length > 0 || (subsequentTrades.length === 0 && diffMinutes <= 15)) {
-      // If we are about to place a trade (subsequentTrades.length == 0), the mere fact of being within 15 mins of a large loss is dangerous, but SPEC says "size at least 1.5x".
-      // We will assume the check-in is the trigger, so we flag it if any recent trade was a loss. 
-      // Strictly following SPEC: we assume the engine runs on the history including the proposed/new trade.
-      // If we don't have the new trade size, we just return a hit based on time.
+    if (largeTrades.length > 0 || proposedPositionIsLarge) {
       return {
         signal: "revenge",
         observedValue: diffMinutes,
@@ -190,7 +194,7 @@ export function detectSource(request: WorkerDetectRequest): SignalHit | null {
 
   const result = evaluateMoneySource({
     source: request.checkIn.fundSource,
-    amountPaise: 0 // Simplification for just getting the hard rule
+    amountPaise: request.checkIn.amountPaise
   });
 
   if (result.multiplier > 0) {
@@ -211,7 +215,7 @@ export function detectSource(request: WorkerDetectRequest): SignalHit | null {
 export function evaluateSignals(request: WorkerDetectRequest): SignalHit[] {
   const hits: SignalHit[] = [];
 
-  const revenge = detectRevenge(request.history, request.nowEpochMs);
+  const revenge = detectRevenge(request.history, request.nowEpochMs, request.checkIn?.amountPaise);
   if (revenge) hits.push(revenge);
 
   const overtrade = detectOvertrade(request.history, request.nowEpochMs);

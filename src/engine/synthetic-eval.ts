@@ -1,4 +1,6 @@
 import { FifoTrade } from "./fifo";
+import { createRng } from "./rng";
+import { Rng } from "./types";
 
 export interface EvalResult {
   persona: string;
@@ -17,7 +19,8 @@ export function runSyntheticEvaluation(
   persona: string,
   history: FifoTrade[],
   complianceProbs: number[] = [0.3, 0.5, 0.7],
-  numTraders: number = 500
+  numTraders: number = 500,
+  rng: Rng = createRng(1)
 ): EvalResult[] {
   const results: EvalResult[] = [];
 
@@ -29,7 +32,7 @@ export function runSyntheticEvaluation(
 
     for (let i = 0; i < numTraders; i++) {
       // Very simplified mock simulation for demonstration
-      // In a real scenario, this would use a seeded RNG to decide if a trade is paused
+      // The injected seeded RNG decides whether a trade is paused, so runs are reproducible
       let currentBaseBalance = 100000;
       let currentPauseBalance = 100000;
       let maxBaseBalance = 100000;
@@ -39,7 +42,7 @@ export function runSyntheticEvaluation(
 
       for (let j = 0; j < history.length; j++) {
         const trade = history[j]!;
-        const pnl = trade.pnlPaise || (Math.random() > 0.5 ? 500 : -500);
+        const pnl = trade.pnlPaise || (rng.next() > 0.5 ? 500 : -500);
 
         // Baseline always takes the trade
         currentBaseBalance += pnl;
@@ -48,7 +51,7 @@ export function runSyntheticEvaluation(
 
         // With pauses: random chance to skip the trade if it's a loss (simulating intervention)
         // Note: For SPEC compliance, we label this as strictly synthetic.
-        const paused = Math.random() < prob;
+        const paused = rng.next() < prob;
         if (!paused) {
           currentPauseBalance += pnl;
           if (currentPauseBalance > maxPauseBalance) maxPauseBalance = currentPauseBalance;

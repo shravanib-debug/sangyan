@@ -46,7 +46,14 @@ describe("Six-signal engine & Risk Score", () => {
     ];
     
     // Evaluate 5 mins later
-    const result = evaluateRisk(createRequest(trades, lossTime + 5 * 60000));
+    const result = evaluateRisk(
+      createRequest(trades, lossTime + 5 * 60000, {
+        amountPaise: 3_000_000,
+        fundSource: "surplus",
+        borrowKind: "none",
+        timestamp: new Date(lossTime + 5 * 60000).toISOString()
+      })
+    );
     
     expect(result.signalHits.some(h => h.signal === "revenge")).toBe(true);
     // Also hits pact breach (cooldown after loss is 30m)
@@ -56,6 +63,35 @@ describe("Six-signal engine & Risk Score", () => {
     expect(result.score).toBe(0.50);
     // Pact breach hard rule forces L3
     expect(result.tier).toBe("L3");
+  });
+
+  it("uses the proposed check-in amount for the revenge size threshold", () => {
+    const lossTime = new Date("2026-10-03T10:00:00Z").getTime();
+    const history: Trade[] = [
+      {
+        id: "loss",
+        timestamp: new Date(lossTime).toISOString(),
+        symbol: "INFY",
+        side: "sell",
+        quantity: 10,
+        pricePaise: 150000,
+        pnlPaise: -20000,
+        source: "synthetic"
+      }
+    ];
+    const at = lossTime + 5 * 60000;
+    const checkIn = {
+      fundSource: "surplus" as const,
+      borrowKind: "none" as const,
+      timestamp: new Date(at).toISOString()
+    };
+
+    const belowThreshold = evaluateRisk(createRequest(history, at, { ...checkIn, amountPaise: 2_249_999 }));
+    const atThreshold = evaluateRisk(createRequest(history, at, { ...checkIn, amountPaise: 2_250_000 }));
+
+    expect(belowThreshold.signalHits.some((hit) => hit.signal === "revenge")).toBe(false);
+    expect(atThreshold.signalHits.some((hit) => hit.signal === "revenge")).toBe(true);
+    expect(atThreshold.score).toBeGreaterThan(belowThreshold.score);
   });
 
   it("detects overtrading", () => {
@@ -78,7 +114,14 @@ describe("Six-signal engine & Risk Score", () => {
 
   it("applies hard rule overrides for borrowed money", () => {
     const now = new Date("2026-10-03T10:00:00Z").getTime();
-    const result = evaluateRisk(createRequest([], now, { fundSource: "borrowed" }));
+    const result = evaluateRisk(
+      createRequest([], now, {
+        amountPaise: 100000,
+        fundSource: "borrowed",
+        borrowKind: "bank_loan",
+        timestamp: new Date(now).toISOString()
+      })
+    );
     
     // Score is just 0.25 from source, which is L1. But borrowed hard rule is L2.
     expect(result.score).toBe(0.25);

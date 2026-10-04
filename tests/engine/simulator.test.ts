@@ -64,5 +64,38 @@ describe("Consequence Simulator", () => {
       // Ensure we got non-zero values
       expect(result.baselineRuinProb).toBeGreaterThan(0);
     });
+
+    it("changes only the outputs that mathematically depend on each UI input", () => {
+      const base = {
+        seed: 12345,
+        numPaths: 5000,
+        numSteps: 100,
+        startPrincipal: 100000,
+        leverage: 8,
+        mu: -0.005,
+        sigma: 0.15,
+        dailyLossLimit: 15000
+      };
+      const original = simulateCohorts(base);
+      const moreCapital = simulateCohorts({ ...base, startPrincipal: 200000 });
+      const lowerLeverage = simulateCohorts({ ...base, leverage: 4 });
+      const tighterLimit = simulateCohorts({ ...base, dailyLossLimit: 5000 });
+      const lowerVolatility = simulateCohorts({ ...base, sigma: 0.05 });
+
+      // Scaling starting capital cannot change percentage baseline ruin, but the
+      // absolute daily-loss limit becomes relatively tighter for the rule cohort.
+      expect(moreCapital.baselineRuinProb).toBe(original.baselineRuinProb);
+      expect(moreCapital.ruleBoundRuinProb).not.toBe(original.ruleBoundRuinProb);
+
+      expect(lowerLeverage.baselineRuinProb).not.toBe(original.baselineRuinProb);
+      expect(lowerLeverage.ruleBoundRuinProb).not.toBe(original.ruleBoundRuinProb);
+
+      // The baseline cohort has no loss-limit rule.
+      expect(tighterLimit.baselineRuinProb).toBe(original.baselineRuinProb);
+      expect(tighterLimit.ruleBoundRuinProb).not.toBe(original.ruleBoundRuinProb);
+
+      expect(lowerVolatility.baselineRuinProb).not.toBe(original.baselineRuinProb);
+      expect(lowerVolatility.ruleBoundRuinProb).not.toBe(original.ruleBoundRuinProb);
+    });
   });
 });

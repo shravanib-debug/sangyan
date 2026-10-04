@@ -112,6 +112,8 @@ export interface JournalEntry {
 export interface PauseEvent {
   id: UUID;
   userId?: UUID;
+  /** Local link used to join a manual check-in to its exact pause and assessment. */
+  checkInId?: UUID;
   assessmentId: UUID;
   tier: RiskTier;
   startedAt: ISODateTime;
@@ -150,7 +152,7 @@ export interface Rng {
 export interface WorkerDetectRequest {
   history: Trade[];
   pact: Pact;
-  checkIn?: Pick<CheckIn, "fundSource" | "borrowKind" | "timestamp">;
+  checkIn?: Pick<CheckIn, "amountPaise" | "fundSource" | "borrowKind" | "timestamp">;
   nowEpochMs: number;
   config: EngineConfig;
 }
