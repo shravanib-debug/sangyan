@@ -90,6 +90,7 @@ export async function runCheckIn(input: CheckInInput, deps: CheckInDeps): Promis
 
   const pause: PauseEvent = {
     id: deps.newId(),
+    checkInId: checkIn.id,
     assessmentId: result.assessmentId,
     tier: result.tier,
     startedAt: nowIso,
