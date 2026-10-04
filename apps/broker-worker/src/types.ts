@@ -1,8 +1,10 @@
+export type BrokerProvider = "zerodha" | "angel_one";
+
 /** Canonical event contract. Mirrors src/engine/types.ts BrokerEvent (the worker is a separate package). */
 export interface BrokerEvent {
   id: string;
   userId: string;
-  provider: "zerodha";
+  provider: BrokerProvider;
   providerEventId: string;
   providerOrderId?: string;
   observedAt: string;

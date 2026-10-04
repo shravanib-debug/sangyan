@@ -347,6 +347,8 @@ rStar = (1 + i)^T - 1
 
 Hard rules: borrowed implies at least L2; emergency funds imply at least L1.
 
+Check-in plan floors (D-017): a self-reported trigger of "make back a loss", "tip" or "fear of missing a move" implies at least L1; an exit plan of "decide as it goes" on an intraday or borrowed-money trade implies at least L1. Floors never lock: L3 still requires a committed Pact breach. Runway and borrowing break-even are shown on the pause when the user enters the optional inputs; those inputs stay on the device.
+
 ### 8.3 Pattern signals
 
 | Key | Default definition |
@@ -355,7 +357,8 @@ Hard rules: borrowed implies at least L2; emergency funds imply at least L1.
 | `overtrade` | At least 8 trades in 30 minutes, or above personal baseline after enough history |
 | `late_night` | Inside a Pact no-trade window or default 23:00-05:00 IST window |
 | `loss_hold` | Median losing hold time divided by winning hold time at least 2, after enough closed trades |
-| `breach` | Violates daily loss, trade count, cooldown, time window, or risk-capital rule |
+| `breach` | Violates, in this order: trade count, daily loss, per-trade cap (`maxPositionPaise`, optional), a committed no-trade window, cooldown |
+| `size_escalation` | Position at least 2x the median of the last 10 positions (5 or more needed); explanatory, weight 0 |
 | `source` | Derived from the current check-in's money source |
 
 All thresholds are configurable in `src/config/defaults.ts`.
@@ -367,6 +370,8 @@ R = sum(weight[k] * signal[k])
 Rhat = R / sum(weight[k])
 ```
 
+`signal[k]` is 1 when a detector fires, except `source`, which uses its triage strength (savings 0.4, emergency fund 0.8, borrowed 1.0). Rhat is rounded to 9 decimals before tier comparison (D-016).
+
 Default weights:
 
 | Signal | Weight |
@@ -377,6 +382,7 @@ Default weights:
 | overtrade | 0.10 |
 | late_night | 0.10 |
 | loss_hold | 0.05 |
+| size_escalation | 0 |
 
 | Normalised score | Tier |
 |---|---|

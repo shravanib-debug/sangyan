@@ -1,5 +1,8 @@
 import type { PauseEvent, PauseOutcome, RiskResult, RiskTier, SignalHit } from "@/engine/types";
+import { getEffectivePact } from "@/engine/pact";
 import type { ThehravDatabase } from "@/storage/local/database";
+
+import { pauseExpiry } from "./checkin-service";
 
 export function remainingSeconds(pause: Pick<PauseEvent, "expiresAt">, nowMs: number): number {
   if (!pause.expiresAt) return 0;
@@ -46,6 +49,58 @@ interface RemotePauseResponse {
  * A pause created by a broker event only exists on the server. Opening it (from a push
  * or the in-app inbox) fetches the protected explanation and caches it for offline use.
  */
+async function requestRemotePause(pauseId: string, fetchImpl: typeof fetch): Promise<RemotePauseResponse | null> {
+  try {
+    const response = await fetchImpl(`/api/pauses/${encodeURIComponent(pauseId)}`, { cache: "no-store" });
+    return response.ok ? ((await response.json()) as RemotePauseResponse) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The server re-checks every synced check-in on its own history and Pact. When its level
+ * is stricter than the one shown on this device, the stricter result wins (conflicts
+ * resolve to stricter, ADR-7): the local pause takes the server's tier, explanation and a
+ * re-derived expiry. The user's decision on this device is kept. Returns the updated view.
+ */
+export async function adoptStricterServerResult(
+  db: ThehravDatabase,
+  pauseId: string,
+  nowMs: number,
+  fetchImpl: typeof fetch = fetch
+): Promise<PauseView | null> {
+  const local = await db.pauses.get(pauseId);
+  if (!local) return null;
+  const remote = await requestRemotePause(pauseId, fetchImpl);
+  if (!remote || remote.assessment.tier <= local.tier) return null;
+
+  const assessment: RiskResult = {
+    assessmentId: remote.assessment.id,
+    score: Number(remote.assessment.score),
+    tier: remote.assessment.tier,
+    signalHits: remote.assessment.signal_hits,
+    hardRuleOverrides: remote.assessment.hard_rule_overrides,
+    engineVersion: remote.assessment.engine_version,
+    configVersion: remote.assessment.config_version,
+    evaluatedAt: remote.assessment.evaluated_at
+  };
+  const pact = getEffectivePact(await db.pacts.toArray(), nowMs);
+  const pause: PauseEvent = {
+    ...local,
+    assessmentId: assessment.assessmentId,
+    tier: assessment.tier,
+    expiresAt: pauseExpiry(assessment.tier, new Date(local.startedAt).getTime(), {
+      cooldownAfterLossMinutes: pact?.cooldownAfterLossMinutes ?? 30
+    })
+  };
+  await db.transaction("rw", db.riskAssessments, db.pauses, async () => {
+    await db.riskAssessments.put(assessment);
+    await db.pauses.put(pause);
+  });
+  return { pause, assessment, simulated: remote.simulated };
+}
+
 export async function fetchRemotePause(
   db: ThehravDatabase,
   pauseId: string,

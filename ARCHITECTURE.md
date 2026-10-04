@@ -685,6 +685,8 @@ This is a behavioral circuit breaker, not an exchange or broker risk control. Th
 | ADR-12 | Zerodha-first official read-only integration | Order WebSocket updates cover broker activity without credential scraping | Requires daily session renewal, consent, encryption, and provider approval/terms review |
 | ADR-13 | Persistent Dockerized broker worker | Live WebSockets outlive serverless request limits | Adds a separately deployed and monitored runtime |
 | ADR-14 | Synthetic replay remains test/fallback only | Keeps tests deterministic and the demo recoverable | Any replayed event must be visibly labelled simulated |
+| ADR-15 | Angel One SmartAPI as a second read-only provider; order book polled with GET (no order WebSocket yet) | Team broker account is Angel One; polling the order book is the read-only surface we can verify from public docs without a live account | Up to one poll interval (15 s) of latency; adapter untested against a live account until activation; hosted SmartAPI login callback still to build |
+| ADR-16 | In-browser demo session through the canonical BrokerEvent and the shared ingestion assessment | Demo and judges can see the connected flow without a live account or deployed worker; nothing leaves the device | Must stay labelled simulated; status rows are derived from real server configuration, never asserted |
 
 ---
 

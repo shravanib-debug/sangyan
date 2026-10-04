@@ -1,7 +1,7 @@
 import { WorkerDetectRequest, RiskResult, RiskTier } from "./types";
 import { evaluateSignals } from "./signals";
 import { evaluateMoneySource } from "./triage";
-import { DEFAULT_ENGINE_CONFIG } from "../config/defaults";
+import { CHECKIN_RULES, DEFAULT_ENGINE_CONFIG } from "../config/defaults";
 
 export function evaluateRisk(request: WorkerDetectRequest): RiskResult {
   const config = request.config || DEFAULT_ENGINE_CONFIG;
@@ -13,13 +13,19 @@ export function evaluateRisk(request: WorkerDetectRequest): RiskResult {
   const maxScore = Object.values(config.weights).reduce((sum, weight) => sum + weight, 0);
 
   for (const hit of hits) {
-    // Look up weight from config
+    // Look up weight from config. Money source is graded by its triage strength
+    // (SPEC §8.4: weight[k] * signal[k]); every other signal is on/off.
     const weight = config.weights[hit.signal] || 0;
-    hit.contribution = weight;
-    raw += weight;
+    const strength =
+      hit.signal === "money_source" && request.checkIn
+        ? evaluateMoneySource({ source: request.checkIn.fundSource, amountPaise: request.checkIn.amountPaise }).multiplier
+        : 1;
+    hit.contribution = weight * strength;
+    raw += hit.contribution;
   }
 
-  const normalised = maxScore > 0 ? raw / maxScore : 0;
+  // Rounded so binary float sums land on the SPEC §8.4 boundaries (0.25+0.10+0.10+0.05 is 0.49999999999999994).
+  const normalised = maxScore > 0 ? Math.round((raw / maxScore) * 1e9) / 1e9 : 0;
 
   // Determine tier from score
   let tierFromScore: RiskTier = "L0";
@@ -40,6 +46,21 @@ export function evaluateRisk(request: WorkerDetectRequest): RiskResult {
     if (triage.hardRuleTier > hardRuleTier) {
       hardRuleTier = triage.hardRuleTier;
       overrides.push(`money_source_${request.checkIn.fundSource}`);
+    }
+  }
+
+  // Check-in plan floors: what the user told us about this decision sets a minimum level.
+  if (request.checkIn) {
+    for (const trigger of request.checkIn.triggers ?? []) {
+      if ((CHECKIN_RULES.floorTriggers as readonly string[]).includes(trigger)) {
+        if ("L1" > hardRuleTier) hardRuleTier = "L1";
+        overrides.push(`plan_trigger_${trigger}`);
+      }
+    }
+    const riskyContext = request.checkIn.horizon === "intraday" || request.checkIn.fundSource === "borrowed";
+    if (request.checkIn.exitPlan === "undecided" && riskyContext) {
+      if (CHECKIN_RULES.undecidedExitFloor > hardRuleTier) hardRuleTier = CHECKIN_RULES.undecidedExitFloor;
+      overrides.push("plan_no_exit");
     }
   }
 

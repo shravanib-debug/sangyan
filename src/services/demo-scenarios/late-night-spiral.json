@@ -1,0 +1,104 @@
+{
+  "id": "late-night-spiral",
+  "symbol": "CRUDEOIL-FUT",
+  "startMinuteIst": 1380,
+  "basePriceRupees": {
+    "min": 5800,
+    "max": 6200
+  },
+  "pact": null,
+  "demonstrates": {
+    "signals": [
+      "revenge",
+      "overtrade",
+      "late_night",
+      "loss_hold"
+    ],
+    "explanationCodes": [
+      "signal.revenge.triggered",
+      "signal.overtrade.triggered",
+      "signal.late_night.triggered",
+      "signal.loss_hold.triggered"
+    ]
+  },
+  "steps": [
+    {
+      "minute": 0,
+      "side": "buy",
+      "quantity": 10,
+      "move": 0
+    },
+    {
+      "minute": 2,
+      "side": "sell",
+      "quantity": 10,
+      "move": 0.006
+    },
+    {
+      "minute": 4,
+      "side": "buy",
+      "quantity": 10,
+      "move": 0
+    },
+    {
+      "minute": 12,
+      "side": "sell",
+      "quantity": 10,
+      "move": -0.012
+    },
+    {
+      "minute": 14,
+      "side": "buy",
+      "quantity": 10,
+      "move": 0
+    },
+    {
+      "minute": 16,
+      "side": "sell",
+      "quantity": 10,
+      "move": 0.006
+    },
+    {
+      "minute": 18,
+      "side": "buy",
+      "quantity": 10,
+      "move": 0
+    },
+    {
+      "minute": 26,
+      "side": "sell",
+      "quantity": 10,
+      "move": -0.012
+    },
+    {
+      "minute": 28,
+      "side": "buy",
+      "quantity": 10,
+      "move": 0
+    },
+    {
+      "minute": 30,
+      "side": "sell",
+      "quantity": 10,
+      "move": 0.006
+    },
+    {
+      "minute": 32,
+      "side": "buy",
+      "quantity": 10,
+      "move": 0
+    },
+    {
+      "minute": 40,
+      "side": "sell",
+      "quantity": 10,
+      "move": -0.012
+    },
+    {
+      "minute": 43,
+      "side": "buy",
+      "quantity": 20,
+      "move": -0.012
+    }
+  ]
+}

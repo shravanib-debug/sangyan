@@ -13,6 +13,7 @@ const serverEnvironmentSchema = z.object({
   VAPID_PRIVATE_KEY: optionalSecret,
   ZERODHA_API_KEY: optionalSecret,
   ZERODHA_API_SECRET: optionalSecret,
+  ANGEL_ONE_API_KEY: optionalSecret,
   BROKER_TOKEN_ENCRYPTION_KEY: z.string().min(32).optional(),
   PUSH_SUBSCRIPTION_ENCRYPTION_KEY: z.string().min(32).optional(),
   BROKER_INTERNAL_SIGNING_KEY: z.string().min(32).optional(),

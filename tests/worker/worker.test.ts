@@ -3,10 +3,17 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { AngelOneAdapter } from "../../apps/broker-worker/src/adapters/angel-one";
 import { ReplayAdapter } from "../../apps/broker-worker/src/adapters/replay";
 import { ZerodhaAdapter } from "../../apps/broker-worker/src/adapters/zerodha";
 import { postEvent, signBody } from "../../apps/broker-worker/src/ingest-client";
-import { normalizeKiteOrder, sanitizeSymbol, uuidFromHash } from "../../apps/broker-worker/src/normalize";
+import {
+  normalizeAngelOrder,
+  normalizeKiteOrder,
+  parseAngelTimestamp,
+  sanitizeSymbol,
+  uuidFromHash
+} from "../../apps/broker-worker/src/normalize";
 import type { BrokerEvent } from "../../apps/broker-worker/src/types";
 import { brokerEventSchema } from "@/lib/validation/schemas";
 import { verifyBodySignature } from "@/lib/crypto/signing";
@@ -23,6 +30,81 @@ const kiteOrder = {
   average_price: 1234.55,
   exchange_update_timestamp: "2026-10-05 11:58:01"
 };
+
+const angelOrder = {
+  orderid: "261005000123",
+  orderstatus: "complete",
+  status: "complete",
+  tradingsymbol: "RELIANCE-EQ",
+  transactiontype: "BUY",
+  filledshares: "10",
+  averageprice: 1425.5,
+  exchorderupdatetime: "05-Oct-2026 11:58:01"
+};
+
+describe("Angel One order normalisation", () => {
+  it("produces a schema-valid canonical event for a completed fill", () => {
+    const event = normalizeAngelOrder(angelOrder, context);
+    expect(event).not.toBeNull();
+    expect(brokerEventSchema.safeParse(event).success).toBe(true);
+    expect(event).toMatchObject({
+      provider: "angel_one",
+      providerOrderId: "261005000123",
+      status: "COMPLETE",
+      symbol: "RELIANCE-EQ",
+      side: "buy",
+      quantity: 10,
+      averagePricePaise: 142550,
+      observedAt: "2026-10-05T06:28:01.000Z"
+    });
+    expect(event?.simulated).toBeUndefined();
+  });
+
+  it("ignores orders that are not completed fills", () => {
+    expect(normalizeAngelOrder({ ...angelOrder, orderstatus: "rejected", status: "rejected" }, context)).toBeNull();
+    expect(normalizeAngelOrder({ ...angelOrder, filledshares: "0" }, context)).toBeNull();
+    expect(normalizeAngelOrder({ ...angelOrder, orderid: undefined }, context)).toBeNull();
+  });
+
+  it("drops fields outside the canonical event", () => {
+    const event = normalizeAngelOrder({ ...angelOrder, ...{ clientcode: "A123", text: "note" } }, context);
+    expect(Object.keys(event ?? {})).not.toContain("clientcode");
+    expect(Object.keys(event ?? {})).not.toContain("text");
+  });
+
+  it("dedupes a re-delivered fill to the same id", () => {
+    expect(normalizeAngelOrder(angelOrder, context)?.id).toBe(normalizeAngelOrder(angelOrder, context)?.id);
+  });
+
+  it("falls back to receipt time for unparseable timestamps", () => {
+    expect(parseAngelTimestamp("2026-10-05 11:58:01", context.nowIso)).toBe(context.nowIso);
+    expect(parseAngelTimestamp(null, context.nowIso)).toBe(context.nowIso);
+  });
+
+  it("reads the order book with GET only and maps an expired token to reauth", async () => {
+    const calls: { url: string; method: string | undefined }[] = [];
+    const ok = (async (url: string, init?: RequestInit) => {
+      calls.push({ url, method: init?.method });
+      return new Response(JSON.stringify({ status: true, data: [angelOrder, { ...angelOrder, orderid: "x", orderstatus: "cancelled" }] }));
+    }) as unknown as typeof fetch;
+    const adapter = new AngelOneAdapter({ apiKey: "k", jwtToken: "t", userId: USER, fetchImpl: ok, now: () => 0 });
+    const events = await adapter.reconcile();
+    expect(events).toHaveLength(1);
+    expect(events[0]?.eventType).toBe("reconciliation");
+    expect(calls).toEqual([
+      { url: "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getOrderBook", method: "GET" }
+    ]);
+
+    const expired = (async () =>
+      new Response(JSON.stringify({ status: false, errorcode: "AG8001", data: null }))) as unknown as typeof fetch;
+    const states: string[] = [];
+    const stale = new AngelOneAdapter({ apiKey: "k", jwtToken: "t", userId: USER, fetchImpl: expired });
+    await expect(stale.reconcile()).rejects.toThrow("angel_reauth_required");
+    stale.start({ onState: (state) => states.push(state), onEvent: async () => {} });
+    await vi.waitFor(() => expect(states).toContain("reauth_required"));
+    stale.stop();
+  });
+});
 
 describe("Kite order normalisation", () => {
   it("produces a schema-valid canonical event", () => {
@@ -200,7 +282,7 @@ describe("read-only boundary (I20)", () => {
   const FORBIDDEN_NAME = /(place|modify|cancel|gtt|basket|transfer|withdraw|payout|fund)/i;
 
   it("exposes no trading method on any adapter", () => {
-    for (const adapter of [ReplayAdapter, ZerodhaAdapter]) {
+    for (const adapter of [ReplayAdapter, ZerodhaAdapter, AngelOneAdapter]) {
       const names = Object.getOwnPropertyNames(adapter.prototype).filter((name) => name !== "constructor");
       expect(names.filter((name) => FORBIDDEN_NAME.test(name))).toEqual([]);
     }

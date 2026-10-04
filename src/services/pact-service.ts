@@ -11,6 +11,8 @@ export interface PactFormValues {
   cooldownAfterLossMinutes: number;
   blockBorrowedFunds: boolean;
   blockEmergencyFunds: boolean;
+  /** Optional per-trade cap in rupees; undefined means no cap. */
+  maxPositionRupees?: number;
 }
 
 export interface LocalPactState {
@@ -53,6 +55,9 @@ export async function savePact(values: PactFormValues, deps: PactDeps): Promise<
     blockedWindows: effective?.blockedWindows ?? DEFAULT_BLOCKED_WINDOWS,
     blockBorrowedFunds: values.blockBorrowedFunds,
     blockEmergencyFunds: values.blockEmergencyFunds,
+    ...(values.maxPositionRupees !== undefined && values.maxPositionRupees > 0
+      ? { maxPositionPaise: Math.round(values.maxPositionRupees * 100) }
+      : {}),
     revision: (effective?.revision ?? 0) + 1,
     effectiveAt: new Date(nowMs).toISOString()
   };

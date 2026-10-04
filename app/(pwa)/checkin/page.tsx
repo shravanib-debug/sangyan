@@ -1,13 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
 
-import type { BorrowKind, CheckIn, FundSource } from "@/engine/types";
+import type { BorrowKind, CheckIn, CheckInTrigger, ExitPlan, FundSource } from "@/engine/types";
+import { refreshBrokerHistory } from "@/services/broker-history";
 import { runCheckIn } from "@/services/checkin-service";
 import { localDatabase } from "@/storage/local/database";
-import { enqueueSyncItem } from "@/storage/local/sync";
+import { enqueueSyncItem, isSyncEnabled } from "@/storage/local/sync";
+
+const EXIT_PLANS: ExitPlan[] = ["price_level", "loss_percent", "time", "undecided"];
+const TRIGGERS: CheckInTrigger[] = ["own_research", "planned", "tip", "recover_loss", "fomo"];
+
+function optionalNumber(value: string): number | undefined {
+  return value.trim() === "" ? undefined : Number(value);
+}
 
 const fieldClass =
   "w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all";
@@ -22,16 +30,48 @@ export default function CheckinPage() {
   const [horizon, setHorizon] = useState<CheckIn["horizon"]>("intraday");
   const [reason, setReason] = useState("");
   const [exitCondition, setExitCondition] = useState("");
+  const [exitPlan, setExitPlan] = useState<ExitPlan | null>(null);
+  const [triggers, setTriggers] = useState<CheckInTrigger[]>([]);
+  const [emergencyFund, setEmergencyFund] = useState("");
+  const [monthlyExpenses, setMonthlyExpenses] = useState("");
+  const [loanRate, setLoanRate] = useState("");
+  const [loanYears, setLoanYears] = useState("");
+
+  // Best-effort: bring the user's own recent broker fills into local history. A check-in never waits for it.
+  useEffect(() => {
+    void refreshBrokerHistory(localDatabase, { syncEnabled: isSyncEnabled });
+  }, []);
+
+  const toggleTrigger = (trigger: CheckInTrigger) =>
+    setTriggers((current) => (current.includes(trigger) ? current.filter((item) => item !== trigger) : [...current, trigger]));
+  const choicesMissing = !exitPlan || triggers.length === 0;
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 
   const handleEvaluate = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!exitPlan || triggers.length === 0) {
+      setFailed(true);
+      return;
+    }
     setBusy(true);
     setFailed(false);
     try {
       const outcome = await runCheckIn(
-        { amountRupees: amount, source, borrowKind, horizon, reason, exitCondition },
+        {
+          amountRupees: amount,
+          source,
+          borrowKind,
+          horizon,
+          reason,
+          exitCondition,
+          exitPlan,
+          triggers,
+          emergencyFundRupees: optionalNumber(emergencyFund),
+          monthlyExpensesRupees: optionalNumber(monthlyExpenses),
+          loanAnnualRatePercent: optionalNumber(loanRate),
+          loanYears: optionalNumber(loanYears)
+        },
         {
           db: localDatabase,
           now: () => Date.now(),
@@ -100,6 +140,41 @@ export default function CheckinPage() {
                   <option value="credit_card">{t("checkin.borrowCard")}</option>
                   <option value="other">{t("checkin.borrowOther")}</option>
                 </select>
+                <p className="text-xs text-gray-500 mt-3">{t("checkin.optionalFiguresNote")}</p>
+                <div className="grid grid-cols-2 gap-3 mt-2">
+                  <div>
+                    <label htmlFor="loanRate" className="block text-sm font-bold text-gray-700 mb-1">
+                      {t("checkin.loanRateLabel")}
+                    </label>
+                    <input id="loanRate" type="number" inputMode="decimal" min={0} value={loanRate} onChange={(e) => setLoanRate(e.target.value)} className={fieldClass} />
+                  </div>
+                  <div>
+                    <label htmlFor="loanYears" className="block text-sm font-bold text-gray-700 mb-1">
+                      {t("checkin.loanYearsLabel")}
+                    </label>
+                    <input id="loanYears" type="number" inputMode="decimal" min={0} value={loanYears} onChange={(e) => setLoanYears(e.target.value)} className={fieldClass} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {source === "emergency_fund" && (
+              <div>
+                <p className="text-xs text-gray-500">{t("checkin.optionalFiguresNote")}</p>
+                <div className="grid grid-cols-2 gap-3 mt-2">
+                  <div>
+                    <label htmlFor="emergencyFund" className="block text-sm font-bold text-gray-700 mb-1">
+                      {t("checkin.emergencyFundLabel")}
+                    </label>
+                    <input id="emergencyFund" type="number" inputMode="decimal" min={0} value={emergencyFund} onChange={(e) => setEmergencyFund(e.target.value)} className={fieldClass} />
+                  </div>
+                  <div>
+                    <label htmlFor="monthlyExpenses" className="block text-sm font-bold text-gray-700 mb-1">
+                      {t("checkin.monthlyExpensesLabel")}
+                    </label>
+                    <input id="monthlyExpenses" type="number" inputMode="decimal" min={0} value={monthlyExpenses} onChange={(e) => setMonthlyExpenses(e.target.value)} className={fieldClass} />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -120,6 +195,30 @@ export default function CheckinPage() {
                 <option value="years">{t("checkin.horizonYears")}</option>
               </select>
             </div>
+
+            <fieldset>
+              <legend className="block text-sm font-bold text-gray-700 mb-2">{t("checkin.triggersLabel")}</legend>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {TRIGGERS.map((item) => (
+                  <label key={item} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer">
+                    <input type="checkbox" checked={triggers.includes(item)} onChange={() => toggleTrigger(item)} className="w-5 h-5" />
+                    <span>{t(`checkin.trigger.${item}`)}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend className="block text-sm font-bold text-gray-700 mb-2">{t("checkin.exitPlanLabel")}</legend>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {EXIT_PLANS.map((item) => (
+                  <label key={item} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer">
+                    <input type="radio" name="exitPlan" checked={exitPlan === item} onChange={() => setExitPlan(item)} className="w-5 h-5" />
+                    <span>{t(`checkin.exitPlan.${item}`)}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
 
             <div>
               <label htmlFor="reason" className="block text-sm font-bold text-gray-700 mb-1">
@@ -155,7 +254,7 @@ export default function CheckinPage() {
           <div className="p-4 bg-gray-50 border-t border-gray-100 space-y-3">
             {failed && (
               <p role="alert" className="text-sm text-red-700">
-                {t("common.error")}
+                {choicesMissing ? t("checkin.choicesRequired") : t("common.error")}
               </p>
             )}
             <button

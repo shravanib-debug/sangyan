@@ -13,7 +13,12 @@ export function SimulatorScreen() {
   const [lossLimit, setLossLimit] = useState(5000);
   const [volatility, setVolatility] = useState(0.02);
   const [busy, setBusy] = useState(false);
-  const [results, setResults] = useState<{ baseline: number; ruleBound: number } | null>(null);
+  const [results, setResults] = useState<{
+    baseline: number;
+    ruleBound: number;
+    baselineWorstDay: number;
+    ruleBoundWorstDay: number;
+  } | null>(null);
   // Keep one random path set for this screen so changing an input has a comparable result.
   const [seed] = useState(() => Date.now());
 
@@ -34,7 +39,9 @@ export function SimulatorScreen() {
       });
       setResults({
         baseline: res.baselineRuinProb,
-        ruleBound: res.ruleBoundRuinProb
+        ruleBound: res.ruleBoundRuinProb,
+        baselineWorstDay: res.baselineAvgWorstDayLoss,
+        ruleBoundWorstDay: res.ruleBoundAvgWorstDayLoss
       });
       setBusy(false);
     }, 50);
@@ -77,6 +84,7 @@ export function SimulatorScreen() {
         <section className={card} aria-live="polite">
           <div className="space-y-4">
             <p className="text-sm text-gray-600">{t("simulator.scenarioDependentNote")}</p>
+            <p className="text-xs text-gray-600">{t("simulator.assumptionsNote")}</p>
             <div>
               <p className="text-sm font-bold text-gray-600">{t("simulator.baselineRuin")}</p>
               <div className="w-full bg-gray-200 rounded-full h-8 mt-1 overflow-hidden relative">
@@ -95,6 +103,18 @@ export function SimulatorScreen() {
                 </span>
               </div>
             </div>
+            <dl className="grid gap-3 sm:grid-cols-2">
+              <div className="p-3 bg-gray-50 rounded-xl">
+                <dt className="text-sm font-bold text-gray-600">{t("simulator.baselineWorstDay")}</dt>
+                <dd className="text-lg font-bold">{t("simulator.worstDayValue", { amount: Math.round(results.baselineWorstDay).toLocaleString("en-IN") })}</dd>
+                <dd className="text-xs text-gray-600">{t("simulator.dependsBaseline")}</dd>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-xl">
+                <dt className="text-sm font-bold text-gray-600">{t("simulator.ruleBoundWorstDay")}</dt>
+                <dd className="text-lg font-bold">{t("simulator.worstDayValue", { amount: Math.round(results.ruleBoundWorstDay).toLocaleString("en-IN") })}</dd>
+                <dd className="text-xs text-gray-600">{t("simulator.dependsRuleBound")}</dd>
+              </div>
+            </dl>
           </div>
         </section>
       )}

@@ -8,7 +8,7 @@ const { getManifest } = workboxBuild;
 
 // Routes that render without user-specific server data. Their prerendered HTML is
 // precached so they open offline after the first load.
-const OFFLINE_ROUTES = ["home", "onboarding", "pact", "checkin", "pause", "settings", "about", "login"];
+const OFFLINE_ROUTES = ["home", "onboarding", "pact", "checkin", "pause", "settings", "about", "login", "broker"];
 
 const prerendered = join(".next", "server", "app");
 const templatedURLs = {};

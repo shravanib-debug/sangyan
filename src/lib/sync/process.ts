@@ -83,6 +83,8 @@ async function syncCheckIn(context: SyncContext, item: SyncItemInput): Promise<S
       fund_source: checkIn.fundSource,
       borrow_kind: checkIn.borrowKind,
       horizon: checkIn.horizon,
+      exit_plan: checkIn.exitPlan ?? null,
+      triggers: checkIn.triggers ?? [],
       // Free text only leaves the device with explicit journal consent.
       reason: context.consents.journalSync ? checkIn.reason : REDACTED_TEXT,
       exit_condition: context.consents.journalSync ? checkIn.exitCondition : REDACTED_TEXT,
@@ -110,7 +112,10 @@ async function syncCheckIn(context: SyncContext, item: SyncItemInput): Promise<S
       amountPaise: checkIn.amountPaise,
       fundSource: checkIn.fundSource,
       borrowKind: checkIn.borrowKind,
-      timestamp: checkIn.timestamp
+      timestamp: checkIn.timestamp,
+      horizon: checkIn.horizon,
+      exitPlan: checkIn.exitPlan,
+      triggers: checkIn.triggers
     },
     nowEpochMs,
     config: DEFAULT_ENGINE_CONFIG

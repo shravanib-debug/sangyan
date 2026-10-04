@@ -35,6 +35,69 @@ export function sanitizeSymbol(symbol: string): string | undefined {
   return cleaned.length > 0 ? cleaned : undefined;
 }
 
+/** Fields Thehrav reads from an Angel One SmartAPI order book entry. Everything else is dropped. */
+export interface AngelOrder {
+  orderid?: string;
+  status?: string;
+  orderstatus?: string;
+  tradingsymbol?: string;
+  transactiontype?: string;
+  filledshares?: string | number;
+  averageprice?: string | number;
+  updatetime?: string | null;
+  exchorderupdatetime?: string | null;
+}
+
+const MONTHS: Record<string, string> = {
+  JAN: "01", FEB: "02", MAR: "03", APR: "04", MAY: "05", JUN: "06",
+  JUL: "07", AUG: "08", SEP: "09", OCT: "10", NOV: "11", DEC: "12"
+};
+
+/** SmartAPI timestamps are IST wall-clock strings: "DD-Mon-YYYY HH:mm:ss". */
+export function parseAngelTimestamp(value: string | null | undefined, fallbackIso: string): string {
+  const match = value?.trim().match(/^(\d{2})-([A-Za-z]{3})-(\d{4}) (\d{2}):(\d{2}):(\d{2})$/);
+  const month = match ? MONTHS[match[2]!.toUpperCase()] : undefined;
+  if (!match || !month) return fallbackIso;
+  const parsed = new Date(`${match[3]}-${month}-${match[1]}T${match[4]}:${match[5]}:${match[6]}+05:30`);
+  return Number.isNaN(parsed.getTime()) ? fallbackIso : parsed.toISOString();
+}
+
+/**
+ * Normalises an Angel One order into the same canonical event as Kite. Only completed
+ * fills are behavioural context; everything else returns null.
+ */
+export function normalizeAngelOrder(
+  order: AngelOrder,
+  context: { userId: string; nowIso: string; eventType: BrokerEvent["eventType"] }
+): BrokerEvent | null {
+  const status = (order.orderstatus ?? order.status ?? "").toLowerCase();
+  if (!order.orderid || status !== "complete") return null;
+  const quantity = Number(order.filledshares ?? 0);
+  const side = order.transactiontype?.toLowerCase();
+  const symbol = order.tradingsymbol ? sanitizeSymbol(order.tradingsymbol) : undefined;
+  if (!(quantity > 0) || (side !== "buy" && side !== "sell") || !symbol) return null;
+
+  const stamp = order.exchorderupdatetime || order.updatetime || "";
+  const dedupeHash = sha256Hex(`angel_one|${order.orderid}|COMPLETE|${quantity}|${stamp}`);
+
+  return {
+    id: uuidFromHash(dedupeHash),
+    userId: context.userId,
+    provider: "angel_one",
+    providerEventId: `${order.orderid}:COMPLETE:${quantity}`,
+    providerOrderId: order.orderid,
+    observedAt: parseAngelTimestamp(stamp, context.nowIso),
+    receivedAt: context.nowIso,
+    eventType: context.eventType,
+    status: "COMPLETE",
+    symbol,
+    side,
+    quantity,
+    averagePricePaise: Math.max(0, Math.round(Number(order.averageprice ?? 0) * 100)),
+    dedupeHash
+  };
+}
+
 /**
  * Normalises a Kite order into the canonical event. Only completed fills are
  * meaningful behavioural context; everything else returns null.

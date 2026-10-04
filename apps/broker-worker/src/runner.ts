@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { AngelOneAdapter } from "./adapters/angel-one.js";
 import { ReplayAdapter } from "./adapters/replay.js";
 import { ZerodhaAdapter } from "./adapters/zerodha.js";
 import type { WorkerConfig } from "./config.js";
@@ -7,11 +8,12 @@ import { brokerAad, decryptSecret, fromPgBytea } from "./crypto.js";
 import { postEvent } from "./ingest-client.js";
 import { log } from "./log.js";
 import type { BrokerEventSource } from "./source.js";
-import type { SessionState } from "./types.js";
+import type { BrokerProvider, SessionState } from "./types.js";
 
 interface ConnectionRow {
   id: string;
   user_id: string;
+  provider?: BrokerProvider;
   provider_user_ref: string;
   encrypted_access_token: string | null;
 }
@@ -111,16 +113,19 @@ export class Runner {
   }
 
   private createSource(row: ConnectionRow): BrokerEventSource | null {
+    const provider = row.provider ?? "zerodha";
     if (row.provider_user_ref.startsWith("replay")) {
       return new ReplayAdapter({
         connectionId: row.id,
         userId: row.user_id,
+        provider,
         stepIntervalMs: this.config.replayStepMs,
         now: () => Date.now()
       });
     }
     // Real sessions need approved credentials and a non-replay worker; otherwise health goes stale honestly.
-    if (this.config.mode === "replay" || !this.config.zerodhaApiKey || !this.config.tokenEncryptionKey) {
+    const apiKey = provider === "angel_one" ? this.config.angelOneApiKey : this.config.zerodhaApiKey;
+    if (this.config.mode === "replay" || !apiKey || !this.config.tokenEncryptionKey) {
       log("warn", "adapter_unavailable", { connectionId: row.id, code: "live_mode_not_configured" });
       return null;
     }
@@ -134,7 +139,9 @@ export class Runner {
         this.config.tokenEncryptionKey,
         brokerAad(row.user_id)
       );
-      return new ZerodhaAdapter({ apiKey: this.config.zerodhaApiKey, accessToken, userId: row.user_id });
+      return provider === "angel_one"
+        ? new AngelOneAdapter({ apiKey, jwtToken: accessToken, userId: row.user_id })
+        : new ZerodhaAdapter({ apiKey, accessToken, userId: row.user_id });
     } catch {
       log("error", "token_decrypt_failed", { connectionId: row.id });
       void this.markReauth(row.id);

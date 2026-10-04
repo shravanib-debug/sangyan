@@ -16,6 +16,10 @@ export function isTighterOrEqual(current: Pact, proposed: Pact): boolean {
   if (proposed.cooldownAfterLossMinutes < current.cooldownAfterLossMinutes) return false;
   if (!proposed.blockBorrowedFunds && current.blockBorrowedFunds) return false;
   if (!proposed.blockEmergencyFunds && current.blockEmergencyFunds) return false;
+  // No cap is the loosest per-trade cap; a higher cap is looser.
+  if (current.maxPositionPaise !== undefined) {
+    if (proposed.maxPositionPaise === undefined || proposed.maxPositionPaise > current.maxPositionPaise) return false;
+  }
 
   // Window comparison: if proposed has fewer windows, it's looser.
   // A robust check would measure overlapping minutes. 
@@ -26,6 +30,12 @@ export function isTighterOrEqual(current: Pact, proposed: Pact): boolean {
   if (proposedMins < currentMins) return false;
 
   return true;
+}
+
+/** The lower of two per-trade caps; absent only when neither side has one. */
+function stricterCap(a: number | undefined, b: number | undefined): { maxPositionPaise?: number } {
+  if (a === undefined && b === undefined) return {};
+  return { maxPositionPaise: Math.min(a ?? Number.POSITIVE_INFINITY, b ?? Number.POSITIVE_INFINITY) };
 }
 
 /**
@@ -63,6 +73,7 @@ export function mergePactsStrict(pactA: Pact, pactB: Pact): Pact {
     blockBorrowedFunds: pactA.blockBorrowedFunds || pactB.blockBorrowedFunds,
     blockEmergencyFunds: pactA.blockEmergencyFunds || pactB.blockEmergencyFunds,
     blockedWindows: mergedWindows,
+    ...stricterCap(pactA.maxPositionPaise, pactB.maxPositionPaise),
     revision,
     effectiveAt: new Date(Math.min(
       new Date(pactA.effectiveAt).getTime(),
@@ -99,6 +110,7 @@ function samePactValues(a: Pact, b: Pact): boolean {
     a.cooldownAfterLossMinutes === b.cooldownAfterLossMinutes &&
     a.blockBorrowedFunds === b.blockBorrowedFunds &&
     a.blockEmergencyFunds === b.blockEmergencyFunds &&
+    a.maxPositionPaise === b.maxPositionPaise &&
     JSON.stringify(a.blockedWindows) === JSON.stringify(b.blockedWindows)
   );
 }

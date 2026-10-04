@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Pact } from "@/engine/types";
-import { loadPactState, savePact } from "@/services/pact-service";
+import { DEFAULT_BLOCKED_WINDOWS, loadPactState, savePact } from "@/services/pact-service";
 import { localDatabase } from "@/storage/local/database";
 import { enqueueSyncItem } from "@/storage/local/sync";
 
@@ -13,6 +13,10 @@ const fieldClass =
   "w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-mono";
 
 type SavedKind = "none" | "tighten" | "loosen" | "mixed";
+
+function formatMinute(minute: number): string {
+  return `${String(Math.floor(minute / 60) % 24).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
+}
 
 export default function PactPage() {
   const { t } = useTranslation();
@@ -26,6 +30,8 @@ export default function PactPage() {
   const [cooldown, setCooldown] = useState(30);
   const [blockBorrowed, setBlockBorrowed] = useState(true);
   const [blockEmergency, setBlockEmergency] = useState(true);
+  const [maxPosition, setMaxPosition] = useState("");
+  const [windows, setWindows] = useState<Pact["blockedWindows"]>(DEFAULT_BLOCKED_WINDOWS);
 
   const [version, setVersion] = useState(0);
 
@@ -45,6 +51,8 @@ export default function PactPage() {
         setCooldown(source.cooldownAfterLossMinutes);
         setBlockBorrowed(source.blockBorrowedFunds);
         setBlockEmergency(source.blockEmergencyFunds);
+        setMaxPosition(source.maxPositionPaise !== undefined ? String(source.maxPositionPaise / 100) : "");
+        setWindows(source.blockedWindows);
       }
     }
     void load(true);
@@ -62,7 +70,8 @@ export default function PactPage() {
         maximumTradesPerDay: maxTrades,
         cooldownAfterLossMinutes: cooldown,
         blockBorrowedFunds: blockBorrowed,
-        blockEmergencyFunds: blockEmergency
+        blockEmergencyFunds: blockEmergency,
+        maxPositionRupees: maxPosition.trim() === "" ? undefined : Number(maxPosition)
       },
       {
         db: localDatabase,
@@ -158,6 +167,31 @@ export default function PactPage() {
                 className={fieldClass}
               />
             </div>
+
+            <div>
+              <label htmlFor="max-position" className="block text-sm font-bold text-gray-700 mb-1">
+                {t("pact.maxPositionLabel")}
+              </label>
+              <input
+                id="max-position"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                placeholder={t("pact.maxPositionPlaceholder")}
+                value={maxPosition}
+                onChange={(e) => setMaxPosition(e.target.value)}
+                className={fieldClass}
+              />
+              <p className="text-xs text-gray-500 mt-1">{t("pact.maxPositionHelp")}</p>
+            </div>
+
+            {windows.length > 0 && (
+              <p className="p-3 bg-orange-50 border border-orange-300 rounded-xl text-sm text-orange-900">
+                {t("pact.windowLockNote", {
+                  windows: windows.map((w) => `${formatMinute(w.startMinuteIst)}–${formatMinute(w.endMinuteIst)}`).join(", ")
+                })}
+              </p>
+            )}
 
             <div className="pt-2 space-y-4">
               <label className="flex items-center space-x-3 cursor-pointer">

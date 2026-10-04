@@ -1,6 +1,6 @@
 import type { BrokerEventSource } from "../source.js";
 import { sha256Hex, uuidFromHash } from "../normalize.js";
-import type { BrokerEvent, BrokerEventHandlers } from "../types.js";
+import type { BrokerEvent, BrokerEventHandlers, BrokerProvider } from "../types.js";
 
 /** Scripted, deterministic scenario: a buy, a losing exit, then a larger re-entry. */
 const SCRIPT: ReadonlyArray<{ side: "buy" | "sell"; quantity: number; pricePaise: number }> = [
@@ -15,13 +15,21 @@ const SCRIPT: ReadonlyArray<{ side: "buy" | "sell"; quantity: number; pricePaise
  * Event identity depends only on (connection, step) so a restart cannot duplicate it.
  */
 export class ReplayAdapter implements BrokerEventSource {
-  readonly provider = "zerodha" as const;
+  readonly provider: BrokerProvider;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private stopped = false;
 
   constructor(
-    private readonly options: { connectionId: string; userId: string; stepIntervalMs: number; now: () => number }
-  ) {}
+    private readonly options: {
+      connectionId: string;
+      userId: string;
+      provider?: BrokerProvider;
+      stepIntervalMs: number;
+      now: () => number;
+    }
+  ) {
+    this.provider = options.provider ?? "zerodha";
+  }
 
   start(handlers: BrokerEventHandlers): void {
     handlers.onState("live");
@@ -50,7 +58,7 @@ export class ReplayAdapter implements BrokerEventSource {
     return {
       id: uuidFromHash(hash),
       userId: this.options.userId,
-      provider: "zerodha",
+      provider: this.provider,
       providerEventId: `replay-${step}`,
       providerOrderId: `replay-order-${step}`,
       observedAt: nowIso,

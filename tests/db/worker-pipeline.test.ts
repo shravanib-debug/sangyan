@@ -27,6 +27,7 @@ const config: WorkerConfig = {
   signingKey: SIGNING_KEY,
   tokenEncryptionKey: "",
   zerodhaApiKey: undefined,
+  angelOneApiKey: undefined,
   mode: "replay",
   workerId: "test-worker",
   leaseSeconds: 60,

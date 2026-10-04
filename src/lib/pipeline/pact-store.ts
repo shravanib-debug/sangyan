@@ -13,6 +13,7 @@ interface PactRow {
   blocked_windows: Pact["blockedWindows"] | null;
   block_borrowed_funds: boolean;
   block_emergency_funds: boolean;
+  max_position_paise?: number | string | null;
   revision: number | string;
   effective_at: string;
 }
@@ -27,6 +28,7 @@ export function pactFromRow(row: PactRow): Pact {
     blockedWindows: row.blocked_windows ?? [],
     blockBorrowedFunds: row.block_borrowed_funds,
     blockEmergencyFunds: row.block_emergency_funds,
+    ...(row.max_position_paise != null ? { maxPositionPaise: Number(row.max_position_paise) } : {}),
     revision: Number(row.revision),
     effectiveAt: row.effective_at
   };
@@ -40,6 +42,7 @@ function pactValues(pact: Pact) {
     blocked_windows: pact.blockedWindows,
     block_borrowed_funds: pact.blockBorrowedFunds,
     block_emergency_funds: pact.blockEmergencyFunds,
+    max_position_paise: pact.maxPositionPaise ?? null,
     revision: pact.revision,
     effective_at: pact.effectiveAt
   };

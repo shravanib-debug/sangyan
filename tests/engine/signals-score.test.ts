@@ -195,7 +195,8 @@ describe("Six-signal engine & Risk Score", () => {
     const now = new Date("2026-10-03T20:00:00.000Z").getTime(); // 01:30 IST on 4 Oct
     expect(new Date(startOfIstDay(now)).toISOString()).toBe("2026-10-03T18:30:00.000Z");
 
-    const pact = { ...basePact, maximumTradesPerDay: 100, dailyLossLimitPaise: 500_000 };
+    // No blocked windows: 01:30 IST would otherwise be a (separate) window breach.
+    const pact = { ...basePact, maximumTradesPerDay: 100, dailyLossLimitPaise: 500_000, blockedWindows: [] };
     const previousIstDay: Trade = {
       id: "previous-day",
       timestamp: "2026-10-03T17:00:00.000Z", // 22:30 IST on 3 Oct

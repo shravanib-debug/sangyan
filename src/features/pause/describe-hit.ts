@@ -17,8 +17,10 @@ function formatMinuteOfDay(minute: number): string {
 function formatValue(code: string, value: SignalHit["observedValue"] | SignalHit["threshold"]): string {
   if (typeof value === "boolean") return value ? "yes" : "no";
   if (typeof value === "string") return value;
-  if (code === "signal.breach.daily_loss") return `₹${Math.abs(Math.round(value / 100)).toLocaleString("en-IN")}`;
-  if (code === "signal.late_night.triggered") return formatMinuteOfDay(value);
+  if (code === "signal.breach.daily_loss" || code === "signal.breach.position_size") {
+    return `₹${Math.abs(Math.round(value / 100)).toLocaleString("en-IN")}`;
+  }
+  if (code === "signal.late_night.triggered" || code === "signal.breach.window") return formatMinuteOfDay(value);
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 

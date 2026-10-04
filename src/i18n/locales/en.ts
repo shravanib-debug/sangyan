@@ -73,7 +73,11 @@ export const en = {
     savedLoosen: "Saved. Your looser rules apply after 24 hours.",
     savedMixed: "Saved. Tighter rules apply now; looser ones apply after 24 hours.",
     savedNone: "Nothing changed. Any waiting loosening was cancelled.",
-    toCheckin: "Go to check-in"
+    toCheckin: "Go to check-in",
+    maxPositionLabel: "Largest single trade (INR, optional)",
+    maxPositionPlaceholder: "No limit",
+    maxPositionHelp: "A trade above this counts as crossing your Pact. Leave empty for no limit.",
+    windowLockNote: "Your no-trade hours: {{windows}} IST. Trading in these hours counts as crossing your Pact and locks a pause."
   },
   checkin: {
     title: "Decision Check-in",
@@ -97,7 +101,28 @@ export const en = {
     horizonYears: "Long term (Years)",
     reasonLabel: "Why this trade now?",
     exitLabel: "What is the exit condition?",
-    evaluateButton: "Evaluate Decision"
+    evaluateButton: "Evaluate Decision",
+    triggersLabel: "What prompted this trade? (pick all that apply)",
+    trigger: {
+      own_research: "My own research",
+      planned: "Planned earlier",
+      tip: "A tip from someone or a group",
+      recover_loss: "To make back a loss",
+      fomo: "Worried about missing a move"
+    },
+    exitPlanLabel: "How will you exit?",
+    exitPlan: {
+      price_level: "At a price level I have set",
+      loss_percent: "If it falls by a set %",
+      time: "By a set time or date",
+      undecided: "I will decide as it goes"
+    },
+    optionalFiguresNote: "Optional. Stays on this device; used only to show the numbers on your pause.",
+    loanRateLabel: "Interest rate (% a year)",
+    loanYearsLabel: "Repay over (years)",
+    emergencyFundLabel: "Emergency fund now (INR)",
+    monthlyExpensesLabel: "Monthly expenses (INR)",
+    choicesRequired: "Pick what prompted this trade and how you will exit."
   },
   pause: {
     title: "Cooling-off Pause",
@@ -119,7 +144,16 @@ export const en = {
     override: {
       money_source_emergency_fund: "Rule applied: emergency money always gets at least a breath-length pause.",
       money_source_borrowed: "Rule applied: borrowed money always gets at least a 2-minute pause.",
-      pact_breach_lock: "Rule applied: a Pact breach locks the pause until the cooldown you set has passed."
+      pact_breach_lock: "Rule applied: a Pact breach locks the pause until the cooldown you set has passed.",
+      plan_trigger_recover_loss: "You told us this trade is to make back a loss. Rule applied: at least a breath-length pause.",
+      plan_trigger_tip: "You told us this trade came from a tip. Rule applied: at least a breath-length pause.",
+      plan_trigger_fomo: "You told us you are worried about missing a move. Rule applied: at least a breath-length pause.",
+      plan_no_exit: "You told us you will decide the exit as it goes, on an intraday or borrowed-money trade. Rule applied: at least a breath-length pause."
+    },
+    serverUpdated: "Updated after checking your broker activity on the server.",
+    figures: {
+      runway: "Your emergency fund covers {{before}} months of expenses now, and {{after}} months after this amount.",
+      loan: "At {{rate}}% a year over {{years}} years, the loan needs a {{required}}% total return just to repay."
     }
   },
   signal: {
@@ -138,7 +172,9 @@ export const en = {
     breach: {
       max_trades: "{{observed}} trades today; your Pact allows {{threshold}}. Share of score: {{contribution}}.",
       daily_loss: "Today's loss is {{observed}}; your Pact limit is {{threshold}}. Share of score: {{contribution}}.",
-      cooldown: "{{observed}} minutes since your last loss; your Pact cooldown is {{threshold}} minutes. Share of score: {{contribution}}."
+      cooldown: "{{observed}} minutes since your last loss; your Pact cooldown is {{threshold}} minutes. Share of score: {{contribution}}.",
+      position_size: "This trade is {{observed}}; your Pact's largest single trade is {{threshold}}. Share of score: {{contribution}}.",
+      window: "Your Pact has no trading between {{observed}} and {{threshold}} IST. Share of score: {{contribution}}."
     },
     source: {
       triggered: "Money source: {{observed}} (lowest-risk source: {{threshold}}). Share of score: {{contribution}}."
@@ -148,6 +184,9 @@ export const en = {
       savings: "core savings",
       emergency_fund: "emergency fund",
       borrowed: "borrowed money"
+    },
+    size: {
+      triggered: "This position is {{observed}}x the usual size of your recent ones (noted from {{threshold}}x). Shown for context; adds nothing to the score."
     }
   },
   simulator: {
@@ -161,11 +200,84 @@ export const en = {
     baselineRuin: "Wipeout risk (No rules)",
     ruleBoundRuin: "Wipeout risk (With limits)",
     scenarioDependentNote: "These results use the starting capital, leverage, daily loss limit, and volatility above.",
+    assumptionsNote: "2,000 simulated paths over 30 trading days. A wipeout means the market moved against the position by 1 ÷ leverage from its entry price. With limits, trading pauses for the rest of a day once that day's loss reaches the limit.",
+    baselineWorstDay: "Average worst single-day loss (No rules)",
+    ruleBoundWorstDay: "Average worst single-day loss (With limits)",
+    worstDayValue: "₹{{amount}}",
+    dependsBaseline: "Changes with: leverage, volatility (loss in ₹ also scales with starting capital)",
+    dependsRuleBound: "Changes with: leverage, volatility, daily loss limit, starting capital",
     disclaimer: "These figures are based on mathematical models using random walks. They do not predict actual market movements or your personal trading outcomes.",
     recoveryTitle: "Recovery Required",
     recoveryInvariantNote: "Fixed recovery math: these percentages do not depend on the simulation inputs.",
     recoveryMath: "A {{loss}}% loss requires a {{gain}}% gain to break even.",
     recoveryWipeout: "Wipeout (100% loss) cannot be recovered."
+  },
+  broker: {
+    title: "Broker Connection",
+    subtitle: "Read-only monitoring of your own fills. Thehrav can never place, change or cancel an order.",
+    angelOne: "Angel One SmartAPI",
+    awaitingBadge: "Pending account activation",
+    adapterLabel: "Broker adapter",
+    adapterValue: "Built: reads the order book only",
+    accessLabel: "How Thehrav uses it",
+    accessValue: "Reads the order book only; never sends orders",
+    appKeyLabel: "App key on this server",
+    configured: "Configured",
+    notConfigured: "Not added yet",
+    checking: "Checking…",
+    cannotCheck: "Cannot check while offline",
+    pipelineLabel: "Event pipeline",
+    pipelineReady: "Ready",
+    pipelineNotDeployed: "Not set up on this server",
+    accountLabel: "Live broker account",
+    accountValue: "Awaiting activation by the broker",
+    modeLabel: "Mode right now",
+    modeValue: "Demo: simulated events",
+    demoNotice: "No live broker account is connected. The session below generates simulated fills in the same event format the Angel One adapter produces, and runs them through the same risk engine. Every simulated event is labelled.",
+    demoTitle: "Demo session",
+    demoBody: "Pick a trading pattern. Simulated fills replay one at a time, and the risk engine assesses each fill in order using only the fills before it.",
+    scenarioPact: "Pact for this scenario: ₹{{limit}} daily loss limit · {{trades}} trades a day · {{minutes}} minutes after a loss.",
+    runDemo: "Run demo session",
+    running: "Session running…",
+    runAgain: "Run a new session",
+    seedLine: "Session seed {{seed}}. The same seed always produces the same session.",
+    eventsTitle: "Broker events (simulated)",
+    buy: "BUY",
+    sell: "SELL",
+    fill: "{{quantity}} @ ₹{{price}}",
+    simulatedTag: "SIMULATED",
+    assessmentTitle: "Risk engine: assessment of the {{time}} fill",
+    tierLabel: "Pause level",
+    scoreLabel: "Risk score",
+    scoreValue: "{{score}}/100",
+    scenarioLabel: "Scenario",
+    signalsTitle: "Detected signals",
+    noSignals: "None detected for this fill.",
+    pactDecisionLabel: "Pact decision",
+    pactBreached: "A rule in your Pact was crossed. The pause is locked.",
+    pactWithin: "No rule in your Pact was crossed.",
+    coolingLabel: "Cooling-off",
+    coolingUntil: "{{tier}} pause active until {{time}}",
+    coolingNone: "Not active",
+    scenarios: {
+      "calm-day": { title: "Calm, planned session", description: "Two planned round trips spread across the morning, each closed with a small gain." },
+      "loss-then-bigger-entry": { title: "Loss, then a bigger re-entry", description: "A losing exit, then a new position twice the size three minutes later. No Pact saved yet." },
+      "churn-then-revenge": { title: "Rapid trading, then a bigger re-entry", description: "Eight quick fills in about twenty minutes; the last exit is a loss, followed by a position twice the size. No Pact saved yet." },
+      "churn-revenge-pact": { title: "Same session, with a Pact", description: "The same rapid trading and bigger re-entry, by someone who saved a Pact of 5 trades a day." },
+      "late-night-churn": { title: "Rapid trading after 11 pm", description: "Eight quick commodity futures fills late at night, each round trip closed for a small gain. No Pact saved yet." },
+      "hold-losers-then-revenge": { title: "Holding losers, then a bigger re-entry", description: "Winners closed after about three minutes, losers held for about fourteen, then a position twice the size after the last loss. No Pact saved yet." },
+      "late-night-spiral": { title: "Late-night spiral", description: "After 11 pm: quick trades, losers held longer than winners, then a bigger re-entry after a loss. No Pact saved yet." },
+      "late-night-spiral-pact": { title: "Late-night spiral, with a Pact", description: "The same late-night spiral, by someone who saved a Pact of 5 trades a day." }
+    },
+    noPact: "No committed Pact: the user has not saved any rules yet.",
+    pactNone: "No Pact committed, so nothing can lock.",
+    rowLoss: "Loss ₹{{amount}}",
+    rowGain: "Gain ₹{{amount}}",
+    rowNewSignal: "New: {{name}}",
+    coolingL1: "L1: {{seconds}}-second breath before the next order",
+    coolingL2: "L2: {{minutes}}-minute reflection before the next order",
+    whyTitle: "Why",
+    afterEventNote: "Broker updates arrive after an order fills, so Thehrav responds after the event. It cannot block an order in the broker's app."
   },
   importHistory: {
     title: "Import History",
@@ -299,7 +411,8 @@ export const en = {
     late_night: "Late-night trading window",
     loss_hold: "Losses held longer than wins",
     pact_breach: "Pact limit crossed",
-    money_source: "Money source"
+    money_source: "Money source",
+    size_escalation: "Bigger than your usual"
   },
   signalLine: "Observed {{observed}} (threshold {{threshold}})",
   units: {

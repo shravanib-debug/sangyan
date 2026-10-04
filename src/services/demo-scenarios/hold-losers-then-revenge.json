@@ -1,0 +1,100 @@
+{
+  "id": "hold-losers-then-revenge",
+  "symbol": "INFY-EQ",
+  "startMinuteIst": 570,
+  "basePriceRupees": {
+    "min": 1450,
+    "max": 1550
+  },
+  "pact": null,
+  "demonstrates": {
+    "signals": [
+      "revenge",
+      "loss_hold"
+    ],
+    "explanationCodes": [
+      "signal.revenge.triggered",
+      "signal.loss_hold.triggered"
+    ]
+  },
+  "steps": [
+    {
+      "minute": 0,
+      "side": "buy",
+      "quantity": 20,
+      "move": 0
+    },
+    {
+      "minute": 3,
+      "side": "sell",
+      "quantity": 20,
+      "move": 0.006
+    },
+    {
+      "minute": 8,
+      "side": "buy",
+      "quantity": 20,
+      "move": 0
+    },
+    {
+      "minute": 22,
+      "side": "sell",
+      "quantity": 20,
+      "move": -0.006
+    },
+    {
+      "minute": 27,
+      "side": "buy",
+      "quantity": 20,
+      "move": 0
+    },
+    {
+      "minute": 30,
+      "side": "sell",
+      "quantity": 20,
+      "move": 0.006
+    },
+    {
+      "minute": 35,
+      "side": "buy",
+      "quantity": 20,
+      "move": 0
+    },
+    {
+      "minute": 49,
+      "side": "sell",
+      "quantity": 20,
+      "move": -0.006
+    },
+    {
+      "minute": 54,
+      "side": "buy",
+      "quantity": 20,
+      "move": 0
+    },
+    {
+      "minute": 57,
+      "side": "sell",
+      "quantity": 20,
+      "move": 0.006
+    },
+    {
+      "minute": 62,
+      "side": "buy",
+      "quantity": 20,
+      "move": 0
+    },
+    {
+      "minute": 76,
+      "side": "sell",
+      "quantity": 20,
+      "move": -0.006
+    },
+    {
+      "minute": 80,
+      "side": "buy",
+      "quantity": 40,
+      "move": -0.006
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import { Trade, Pact, SignalHit, WorkerDetectRequest } from "./types";
 import { evaluateMoneySource } from "./triage";
+import { SIZE_ESCALATION } from "../config/defaults";
 
 const MINUTE_MS = 60_000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
@@ -80,26 +81,11 @@ export function detectOvertrade(trades: Trade[], nowEpochMs: number): SignalHit 
  * Late Night: Inside a Pact no-trade window or default 23:00-05:00 IST window
  */
 export function detectLateNight(pact: Pact, nowEpochMs: number): SignalHit | null {
-  // Convert now to IST minute of day
-  // JavaScript Date is tricky with timezones, we'll assume UTC for now and offset by +5:30
-  const date = new Date(nowEpochMs);
-  const istMinutesTotal = date.getUTCHours() * 60 + date.getUTCMinutes() + 330;
-  let currentMinuteIst = istMinutesTotal % 1440;
-  if (currentMinuteIst < 0) currentMinuteIst += 1440;
+  const currentMinuteIst = istMinuteOfDay(nowEpochMs);
 
   // Default late night: 23:00 (1380) to 05:00 (300)
   const isDefaultLateNight = currentMinuteIst >= 1380 || currentMinuteIst <= 300;
-
-  // Check pact windows
-  let inPactWindow = false;
-  for (const w of pact.blockedWindows) {
-    if (w.startMinuteIst <= w.endMinuteIst) {
-      if (currentMinuteIst >= w.startMinuteIst && currentMinuteIst <= w.endMinuteIst) inPactWindow = true;
-    } else {
-      // wraps around midnight
-      if (currentMinuteIst >= w.startMinuteIst || currentMinuteIst <= w.endMinuteIst) inPactWindow = true;
-    }
-  }
+  const inPactWindow = pactWindowAt(pact, currentMinuteIst) !== null;
 
   if (isDefaultLateNight || inPactWindow) {
     return {
@@ -111,6 +97,66 @@ export function detectLateNight(pact: Pact, nowEpochMs: number): SignalHit | nul
     };
   }
   return null;
+}
+
+/** Minute of the day in Asia/Kolkata. */
+export function istMinuteOfDay(nowEpochMs: number): number {
+  const date = new Date(nowEpochMs);
+  const minutes = (date.getUTCHours() * 60 + date.getUTCMinutes() + 330) % 1440;
+  return minutes < 0 ? minutes + 1440 : minutes;
+}
+
+/** The Pact no-trade window containing this IST minute, if any (windows may wrap midnight). */
+export function pactWindowAt(pact: Pact, minuteIst: number): Pact["blockedWindows"][number] | null {
+  for (const w of pact.blockedWindows) {
+    const inside =
+      w.startMinuteIst <= w.endMinuteIst
+        ? minuteIst >= w.startMinuteIst && minuteIst <= w.endMinuteIst
+        : minuteIst >= w.startMinuteIst || minuteIst <= w.endMinuteIst;
+    if (inside) return w;
+  }
+  return null;
+}
+
+/** Notional of the fill observed exactly now (a broker evaluation includes it in history). */
+function currentFillNotional(trades: Trade[], nowEpochMs: number, side?: Trade["side"]): number | undefined {
+  for (let i = trades.length - 1; i >= 0; i--) {
+    const trade = trades[i]!;
+    if (new Date(trade.timestamp).getTime() === nowEpochMs && (!side || trade.side === side)) {
+      return trade.quantity * trade.pricePaise;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Size escalation: the new position is at least `multiple` x the median of the user's
+ * recent positions. Explanatory: its weight is 0 in the default config.
+ */
+export function detectSizeEscalation(
+  trades: Trade[],
+  nowEpochMs: number,
+  proposedAmountPaise: number | undefined,
+  rule: { multiple: number; lookbackTrades: number; minimumTrades: number }
+): SignalHit | null {
+  const amount = proposedAmountPaise ?? currentFillNotional(trades, nowEpochMs, "buy");
+  if (amount === undefined) return null;
+  const previous = trades
+    .filter((t) => t.side === "buy" && new Date(t.timestamp).getTime() < nowEpochMs)
+    .slice(-rule.lookbackTrades)
+    .map((t) => t.quantity * t.pricePaise)
+    .sort((a, b) => a - b);
+  if (previous.length < rule.minimumTrades) return null;
+  const middle = Math.floor(previous.length / 2);
+  const median = previous.length % 2 ? previous[middle]! : (previous[middle - 1]! + previous[middle]!) / 2;
+  if (median <= 0 || amount < median * rule.multiple) return null;
+  return {
+    signal: "size_escalation",
+    observedValue: Number((amount / median).toFixed(1)),
+    threshold: rule.multiple,
+    contribution: 0,
+    explanationCode: "signal.size.triggered"
+  };
 }
 
 /**
@@ -147,7 +193,12 @@ export function detectLossHold(trades: Trade[]): SignalHit | null {
 /**
  * Breach: Violates daily loss, trade count, cooldown, etc.
  */
-export function detectBreach(trades: Trade[], pact: Pact, nowEpochMs: number): SignalHit | null {
+export function detectBreach(
+  trades: Trade[],
+  pact: Pact,
+  nowEpochMs: number,
+  proposedAmountPaise?: number
+): SignalHit | null {
   const dayMs = startOfIstDay(nowEpochMs);
 
   const todayTrades = trades.filter(t => new Date(t.timestamp).getTime() >= dayMs);
@@ -172,6 +223,32 @@ export function detectBreach(trades: Trade[], pact: Pact, nowEpochMs: number): S
       threshold: -pact.dailyLossLimitPaise,
       contribution: 0,
       explanationCode: "signal.breach.daily_loss"
+    };
+  }
+
+  // Per-trade cap the user committed to
+  if (pact.maxPositionPaise !== undefined) {
+    const amount = proposedAmountPaise ?? currentFillNotional(trades, nowEpochMs);
+    if (amount !== undefined && amount > pact.maxPositionPaise) {
+      return {
+        signal: "pact_breach",
+        observedValue: amount,
+        threshold: pact.maxPositionPaise,
+        contribution: 0,
+        explanationCode: "signal.breach.position_size"
+      };
+    }
+  }
+
+  // Trading inside a no-trade window the user committed to
+  const window = pactWindowAt(pact, istMinuteOfDay(nowEpochMs));
+  if (window) {
+    return {
+      signal: "pact_breach",
+      observedValue: window.startMinuteIst,
+      threshold: window.endMinuteIst,
+      contribution: 0,
+      explanationCode: "signal.breach.window"
     };
   }
 
@@ -234,11 +311,16 @@ export function evaluateSignals(request: WorkerDetectRequest): SignalHit[] {
   const lossHold = detectLossHold(request.history);
   if (lossHold) hits.push(lossHold);
 
-  const breach = request.pactCommitted ? detectBreach(request.history, request.pact, request.nowEpochMs) : null;
+  const breach = request.pactCommitted
+    ? detectBreach(request.history, request.pact, request.nowEpochMs, request.checkIn?.amountPaise)
+    : null;
   if (breach) hits.push(breach);
 
   const source = detectSource(request);
   if (source) hits.push(source);
+
+  const size = detectSizeEscalation(request.history, request.nowEpochMs, request.checkIn?.amountPaise, SIZE_ESCALATION);
+  if (size) hits.push(size);
 
   return hits;
 }

@@ -1,7 +1,17 @@
 import { DEFAULT_ENGINE_CONFIG, PAUSE_POLICY } from "@/config/defaults";
 import { getEffectivePact } from "@/engine/pact";
 import { evaluateRisk } from "@/engine/score";
-import type { BorrowKind, CheckIn, FundSource, Pact, PauseEvent, RiskTier } from "@/engine/types";
+import { evaluateMoneySource } from "@/engine/triage";
+import type {
+  BorrowKind,
+  CheckIn,
+  CheckInTrigger,
+  ExitPlan,
+  FundSource,
+  Pact,
+  PauseEvent,
+  RiskTier
+} from "@/engine/types";
 import type { ThehravDatabase } from "@/storage/local/database";
 
 export interface CheckInInput {
@@ -11,6 +21,13 @@ export interface CheckInInput {
   horizon: CheckIn["horizon"];
   reason: string;
   exitCondition: string;
+  exitPlan?: ExitPlan;
+  triggers?: CheckInTrigger[];
+  /** Optional, local-only inputs for the money-source figures. */
+  emergencyFundRupees?: number;
+  monthlyExpensesRupees?: number;
+  loanAnnualRatePercent?: number;
+  loanYears?: number;
 }
 
 export interface CheckInDeps {
@@ -42,6 +59,55 @@ export function pauseExpiry(tier: RiskTier, startedMs: number, pact: Pick<Pact, 
   }
 }
 
+/** The money-source inputs (fund balance, expenses, loan terms) never leave the device. */
+export function withoutLocalOnlyFields(checkIn: CheckIn): CheckIn {
+  const copy = { ...checkIn };
+  delete copy.emergencyFundBalancePaise;
+  delete copy.monthlyExpensesPaise;
+  delete copy.loanAnnualRatePercent;
+  delete copy.loanYears;
+  return copy;
+}
+
+function positive(value: number | undefined): boolean {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+export interface MoneySourceFigures {
+  /** Months of expenses the emergency fund covers before and after this amount. */
+  runway?: { beforeMonths: number; afterMonths: number };
+  /** Total return needed just to repay the loan over its term, as a fraction (0.39 = 39%). */
+  loanBreakEven?: { ratePercent: number; years: number; requiredReturn: number };
+}
+
+/** SPEC §8.2 figures from the user's own inputs (no market data, no prediction). */
+export function moneySourceFigures(checkIn: CheckIn): MoneySourceFigures {
+  const triage = evaluateMoneySource({
+    source: checkIn.fundSource,
+    amountPaise: checkIn.amountPaise,
+    emergencyFundBalancePaise: checkIn.emergencyFundBalancePaise,
+    monthlyExpensesPaise: checkIn.monthlyExpensesPaise,
+    annualInterestRate: checkIn.loanAnnualRatePercent !== undefined ? checkIn.loanAnnualRatePercent / 100 : undefined,
+    horizonYears: checkIn.loanYears
+  });
+  const figures: MoneySourceFigures = {};
+  if (
+    triage.runwayBeforeMonths !== undefined &&
+    triage.runwayWorstMonths !== undefined &&
+    Number.isFinite(triage.runwayBeforeMonths)
+  ) {
+    figures.runway = { beforeMonths: triage.runwayBeforeMonths, afterMonths: triage.runwayWorstMonths };
+  }
+  if (triage.borrowingBreakEvenRate !== undefined && Number.isFinite(triage.borrowingBreakEvenRate)) {
+    figures.loanBreakEven = {
+      ratePercent: checkIn.loanAnnualRatePercent!,
+      years: checkIn.loanYears!,
+      requiredReturn: triage.borrowingBreakEvenRate
+    };
+  }
+  return figures;
+}
+
 /**
  * Money source -> detect -> score -> pause, entirely on the device. The result is
  * stored locally first so the user never waits for the network; sync happens afterwards.
@@ -71,8 +137,18 @@ export async function runCheckIn(input: CheckInInput, deps: CheckInDeps): Promis
     borrowKind: input.source === "borrowed" ? input.borrowKind : "none",
     horizon: input.horizon,
     reason: input.reason.trim(),
-    exitCondition: input.exitCondition.trim()
+    exitCondition: input.exitCondition.trim(),
+    ...(input.exitPlan ? { exitPlan: input.exitPlan } : {}),
+    ...(input.triggers ? { triggers: [...new Set(input.triggers)] } : {})
   };
+  if (input.source === "emergency_fund" && positive(input.emergencyFundRupees) && positive(input.monthlyExpensesRupees)) {
+    checkIn.emergencyFundBalancePaise = Math.round(input.emergencyFundRupees! * 100);
+    checkIn.monthlyExpensesPaise = Math.round(input.monthlyExpensesRupees! * 100);
+  }
+  if (input.source === "borrowed" && positive(input.loanAnnualRatePercent) && positive(input.loanYears)) {
+    checkIn.loanAnnualRatePercent = input.loanAnnualRatePercent;
+    checkIn.loanYears = input.loanYears;
+  }
 
   const history = await deps.db.trades
     .where("timestamp")
@@ -106,7 +182,7 @@ export async function runCheckIn(input: CheckInInput, deps: CheckInDeps): Promis
     await deps.db.pauses.put(pause);
   });
 
-  await deps.enqueue("checkin", { ...checkIn, assessmentId: result.assessmentId }, `checkin-${checkIn.id}`);
+  await deps.enqueue("checkin", { ...withoutLocalOnlyFields(checkIn), assessmentId: result.assessmentId }, `checkin-${checkIn.id}`);
   await deps.enqueue(
     "pause",
     {

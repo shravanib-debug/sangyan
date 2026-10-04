@@ -1,0 +1,13 @@
+{
+  "id": "calm-day",
+  "symbol": "RELIANCE-EQ",
+  "startMinuteIst": 600,
+  "basePriceRupees": { "min": 1380, "max": 1470 },
+  "demonstrates": { "signals": [] },
+  "steps": [
+    { "minute": 0, "side": "buy", "quantity": 20, "move": 0 },
+    { "minute": 55, "side": "sell", "quantity": 20, "move": 0.008 },
+    { "minute": 120, "side": "buy", "quantity": 15, "move": 0.004 },
+    { "minute": 200, "side": "sell", "quantity": 15, "move": 0.011 }
+  ]
+}

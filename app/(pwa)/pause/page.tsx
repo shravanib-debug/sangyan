@@ -7,14 +7,19 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { RiskTier } from "@/engine/types";
 import { describeHit } from "@/features/pause/describe-hit";
 import {
+  adoptStricterServerResult,
   fetchRemotePause,
   loadLocalPause,
   remainingSeconds,
   resolvePause,
   type PauseView
 } from "@/services/pause-service";
+import { moneySourceFigures, type MoneySourceFigures } from "@/services/checkin-service";
 import { localDatabase } from "@/storage/local/database";
-import { enqueueSyncItem } from "@/storage/local/sync";
+import { enqueueSyncItem, isSyncEnabled } from "@/storage/local/sync";
+
+/** Retries while the check-in may still be syncing; the server re-check is not instant. */
+const SERVER_CHECK_DELAYS_MS = [3_000, 8_000, 20_000];
 
 const tierStyle: Record<RiskTier, string> = {
   L0: "bg-green-100 text-green-900 border-green-300",
@@ -31,6 +36,8 @@ function PauseScreen() {
   const [view, setView] = useState<PauseView | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "missing">("loading");
   const [now, setNow] = useState<number | null>(null);
+  const [figures, setFigures] = useState<MoneySourceFigures>({});
+  const [serverUpdated, setServerUpdated] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,12 +52,40 @@ function PauseScreen() {
       setView(found);
       setNow(Date.now());
       setState(found ? "ready" : "missing");
+      const checkInId = found?.pause.checkInId;
+      const checkIn = checkInId ? await localDatabase.checkins.get(checkInId) : undefined;
+      if (!cancelled && checkIn) setFigures(moneySourceFigures(checkIn));
     }
     void load();
     return () => {
       cancelled = true;
     };
   }, [pauseId]);
+
+  // When signed in with sync, adopt the server re-check if it is stricter than this device's result.
+  useEffect(() => {
+    if (state !== "ready" || !pauseId || view?.pause.outcome !== "waiting") return;
+    let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    void isSyncEnabled().then((enabled) => {
+      if (!enabled || cancelled) return;
+      for (const delay of SERVER_CHECK_DELAYS_MS) {
+        timers.push(
+          setTimeout(() => {
+            void adoptStricterServerResult(localDatabase, pauseId, Date.now()).then((updated) => {
+              if (!updated || cancelled) return;
+              setView(updated);
+              setServerUpdated(true);
+            });
+          }, delay)
+        );
+      }
+    });
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+    };
+  }, [state, pauseId, view?.pause.outcome]);
 
   // The countdown derives from the stored expiry, so a reload cannot reset or skip it.
   useEffect(() => {
@@ -98,6 +133,12 @@ function PauseScreen() {
           </div>
         )}
 
+        {serverUpdated && (
+          <div role="status" className="p-3 rounded-xl border border-orange-300 bg-orange-50 text-orange-900 text-sm">
+            {t("pause.serverUpdated")}
+          </div>
+        )}
+
         <div className={`p-6 rounded-2xl border ${tierStyle[pause.tier]}`}>
           <div className="text-xl font-bold mb-1">
             {pause.tier} · {t(`pause.${pause.tier.toLowerCase()}` as "pause.l0")}
@@ -121,6 +162,27 @@ function PauseScreen() {
               </li>
             ))}
           </ul>
+          {(figures.runway || figures.loanBreakEven) && (
+            <ul className="mt-4 space-y-1 text-sm border-t border-current/20 pt-3">
+              {figures.runway && (
+                <li>
+                  {t("pause.figures.runway", {
+                    before: figures.runway.beforeMonths.toFixed(1),
+                    after: figures.runway.afterMonths.toFixed(1)
+                  })}
+                </li>
+              )}
+              {figures.loanBreakEven && (
+                <li>
+                  {t("pause.figures.loan", {
+                    rate: figures.loanBreakEven.ratePercent,
+                    years: figures.loanBreakEven.years,
+                    required: Math.round(figures.loanBreakEven.requiredReturn * 100)
+                  })}
+                </li>
+              )}
+            </ul>
+          )}
         </div>
 
         {!decided && (

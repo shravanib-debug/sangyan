@@ -8,6 +8,7 @@ export interface WorkerConfig {
   signingKey: string;
   tokenEncryptionKey: string;
   zerodhaApiKey: string | undefined;
+  angelOneApiKey: string | undefined;
   mode: "replay" | "sandbox" | "live";
   workerId: string;
   leaseSeconds: number;
@@ -32,6 +33,7 @@ export function readConfig(environment: NodeJS.ProcessEnv = process.env): Worker
     signingKey: required("BROKER_INTERNAL_SIGNING_KEY"),
     tokenEncryptionKey: environment.BROKER_TOKEN_ENCRYPTION_KEY ?? "",
     zerodhaApiKey: environment.ZERODHA_API_KEY,
+    angelOneApiKey: environment.ANGEL_ONE_API_KEY,
     mode,
     workerId: `${hostname()}-${process.pid}`,
     leaseSeconds: 60,

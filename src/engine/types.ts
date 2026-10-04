@@ -5,6 +5,10 @@ export type TradeSide = "buy" | "sell";
 export type TradeSource = "csv" | "synthetic" | "connected";
 export type BrokerProvider = "zerodha" | "angel_one";
 export type FundSource = "surplus" | "savings" | "emergency_fund" | "borrowed";
+/** How the user plans to exit, chosen at check-in. */
+export type ExitPlan = "price_level" | "loss_percent" | "time" | "undecided";
+/** What prompted the decision, as the user reports it at check-in. */
+export type CheckInTrigger = "own_research" | "tip" | "recover_loss" | "fomo" | "planned";
 export type BorrowKind = "none" | "bank_loan" | "instant_loan" | "credit_card" | "other";
 export type RiskTier = "L0" | "L1" | "L2" | "L3";
 export type PauseOutcome = "waiting" | "continued" | "skipped_pause" | "abandoned" | "expired";
@@ -58,6 +62,8 @@ export interface Pact {
   blockedWindows: ReadonlyArray<{ startMinuteIst: number; endMinuteIst: number }>;
   blockBorrowedFunds: boolean;
   blockEmergencyFunds: boolean;
+  /** Optional per-trade cap the user committed to; absent means no cap. */
+  maxPositionPaise?: number;
   revision: number;
   effectiveAt: ISODateTime;
 }
@@ -72,6 +78,13 @@ export interface CheckIn {
   horizon: "intraday" | "days" | "weeks" | "months" | "years";
   reason: string;
   exitCondition: string;
+  exitPlan?: ExitPlan;
+  triggers?: CheckInTrigger[];
+  /** Local-only inputs for the money-source numbers; never synced. */
+  emergencyFundBalancePaise?: number;
+  monthlyExpensesPaise?: number;
+  loanAnnualRatePercent?: number;
+  loanYears?: number;
 }
 
 export interface SignalHit {
@@ -81,7 +94,8 @@ export interface SignalHit {
     | "late_night"
     | "loss_hold"
     | "pact_breach"
-    | "money_source";
+    | "money_source"
+    | "size_escalation";
   observedValue: number | string | boolean;
   threshold: number | string | boolean;
   contribution: number;
@@ -154,7 +168,8 @@ export interface WorkerDetectRequest {
   pact: Pact;
   /** True only when the Pact came from an explicit user save, never from fallback defaults. */
   pactCommitted: boolean;
-  checkIn?: Pick<CheckIn, "amountPaise" | "fundSource" | "borrowKind" | "timestamp">;
+  checkIn?: Pick<CheckIn, "amountPaise" | "fundSource" | "borrowKind" | "timestamp"> &
+    Partial<Pick<CheckIn, "horizon" | "exitPlan" | "triggers">>;
   nowEpochMs: number;
   config: EngineConfig;
 }

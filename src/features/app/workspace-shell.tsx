@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { logout } from "../../../app/auth/actions";
 
 type NavItem = {
-  href: "/" | "/home" | "/checkin" | "/simulator" | "/journal" | "/import" | "/pact" | "/settings";
+  href: "/" | "/home" | "/checkin" | "/simulator" | "/journal" | "/import" | "/pact" | "/settings" | "/broker";
   label: string;
   icon: string;
   mobileLabel?: string;
@@ -18,7 +18,8 @@ const primaryNav: NavItem[] = [
   { href: "/checkin", label: "Decision Check-in", icon: "✓", mobileLabel: "Check-in" },
   { href: "/simulator", label: "Consequence Simulator", icon: "◒", mobileLabel: "Tools" },
   { href: "/journal", label: "Decision Journal", icon: "▤", mobileLabel: "Journal" },
-  { href: "/import", label: "Import History", icon: "⇧" }
+  { href: "/import", label: "Import History", icon: "⇧" },
+  { href: "/broker", label: "Broker Connection", icon: "⇄" }
 ];
 
 const mobileNav: NavItem[] = [

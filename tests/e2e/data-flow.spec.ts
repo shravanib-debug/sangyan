@@ -4,7 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 async function submitCheckIn(
   page: Page,
-  input: { amount: string; source: "surplus" | "savings" | "borrowed" | "emergency"; reason: string; exit: string }
+  input: { amount: string; source: "surplus" | "savings" | "borrowed" | "emergency_fund"; reason: string; exit: string }
 ) {
   await page.goto("/checkin");
   await page.getByLabel("Trade amount (INR)").fill(input.amount);
@@ -13,6 +13,8 @@ async function submitCheckIn(
     await page.getByLabel("Type of borrowing").selectOption("instant_loan");
   }
   await page.getByLabel("Expected holding period").selectOption(input.source === "surplus" ? "weeks" : "intraday");
+  await page.getByLabel("Planned earlier").check();
+  await page.getByLabel("At a price level I have set").check();
   await page.getByLabel("Why this trade now?").fill(input.reason);
   await page.getByLabel("What is the exit condition?").fill(input.exit);
   await page.getByRole("button", { name: "Evaluate Decision" }).click();
@@ -132,11 +134,12 @@ test("onboarding persists Hindi and Marathi locales across reloads", async ({ pa
 });
 
 test("L1 and L2 pauses can be skipped while L3 requires an explicit matching Pact", async ({ page }) => {
+  // Savings alone scores 0.10 (L0) since D-017; the emergency-fund hard rule gives a skippable L1.
   await submitCheckIn(page, {
     amount: "1000",
-    source: "savings",
-    reason: "Planned savings check",
-    exit: "Written savings stop"
+    source: "emergency_fund",
+    reason: "Planned emergency check",
+    exit: "Written emergency stop"
   });
   await expect(page.getByText("L1 ·")).toBeVisible();
   await expect(page.getByRole("timer")).toBeVisible();

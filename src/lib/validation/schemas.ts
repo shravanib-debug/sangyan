@@ -58,6 +58,7 @@ export const pactSchema = z
       .max(8),
     blockBorrowedFunds: z.boolean(),
     blockEmergencyFunds: z.boolean(),
+    maxPositionPaise: z.number().int().positive().max(1_000_000_000_000).optional(),
     revision: z.number().int().nonnegative(),
     effectiveAt: isoDateTimeSchema
   })
@@ -73,7 +74,13 @@ export const checkInSchema = z
     borrowKind: z.enum(["none", "bank_loan", "instant_loan", "credit_card", "other"]),
     horizon: z.enum(["intraday", "days", "weeks", "months", "years"]),
     reason: z.string().trim().min(1).max(1000),
-    exitCondition: z.string().trim().min(1).max(500)
+    exitCondition: z.string().trim().min(1).max(500),
+    exitPlan: z.enum(["price_level", "loss_percent", "time", "undecided"]).optional(),
+    triggers: z.array(z.enum(["own_research", "tip", "recover_loss", "fomo", "planned"])).max(5).optional(),
+    emergencyFundBalancePaise: nonNegativePaiseSchema.optional(),
+    monthlyExpensesPaise: nonNegativePaiseSchema.optional(),
+    loanAnnualRatePercent: z.number().min(0).max(200).optional(),
+    loanYears: z.number().min(0).max(50).optional()
   })
   .strict();
 
@@ -107,7 +114,17 @@ export const brokerConnectionSummarySchema = z
   .strict();
 
 // Sync payloads never carry a user id: the server uses the authenticated user.
-export const checkInSyncSchema = checkInSchema.omit({ userId: true }).extend({ assessmentId: uuidSchema }).strict();
+// The money-source inputs (fund balance, expenses, loan terms) never leave the device.
+export const checkInSyncSchema = checkInSchema
+  .omit({
+    userId: true,
+    emergencyFundBalancePaise: true,
+    monthlyExpensesPaise: true,
+    loanAnnualRatePercent: true,
+    loanYears: true
+  })
+  .extend({ assessmentId: uuidSchema })
+  .strict();
 
 export const pactSyncSchema = pactSchema.omit({ userId: true }).strict();
 

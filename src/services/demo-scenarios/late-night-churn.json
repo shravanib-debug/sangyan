@@ -1,0 +1,70 @@
+{
+  "id": "late-night-churn",
+  "symbol": "CRUDEOIL-FUT",
+  "startMinuteIst": 1385,
+  "basePriceRupees": {
+    "min": 5800,
+    "max": 6200
+  },
+  "pact": null,
+  "demonstrates": {
+    "signals": [
+      "overtrade",
+      "late_night"
+    ],
+    "explanationCodes": [
+      "signal.overtrade.triggered",
+      "signal.late_night.triggered"
+    ]
+  },
+  "steps": [
+    {
+      "minute": 0,
+      "side": "buy",
+      "quantity": 10,
+      "move": 0.0
+    },
+    {
+      "minute": 3,
+      "side": "sell",
+      "quantity": 10,
+      "move": 0.005
+    },
+    {
+      "minute": 6,
+      "side": "buy",
+      "quantity": 10,
+      "move": 0.002
+    },
+    {
+      "minute": 9,
+      "side": "sell",
+      "quantity": 10,
+      "move": 0.007
+    },
+    {
+      "minute": 12,
+      "side": "buy",
+      "quantity": 10,
+      "move": 0.004
+    },
+    {
+      "minute": 15,
+      "side": "sell",
+      "quantity": 10,
+      "move": 0.009
+    },
+    {
+      "minute": 18,
+      "side": "buy",
+      "quantity": 10,
+      "move": 0.006
+    },
+    {
+      "minute": 21,
+      "side": "sell",
+      "quantity": 10,
+      "move": 0.011
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "id": "churn-revenge-pact",
+  "symbol": "RELIANCE-EQ",
+  "startMinuteIst": 660,
+  "basePriceRupees": {
+    "min": 1380,
+    "max": 1470
+  },
+  "demonstrates": {
+    "signals": [
+      "revenge",
+      "overtrade",
+      "pact_breach"
+    ],
+    "explanationCodes": [
+      "signal.revenge.triggered",
+      "signal.overtrade.triggered",
+      "signal.breach.max_trades"
+    ]
+  },
+  "steps": [
+    {
+      "minute": 0,
+      "side": "buy",
+      "quantity": 10,
+      "move": 0.0
+    },
+    {
+      "minute": 3,
+      "side": "sell",
+      "quantity": 10,
+      "move": 0.005
+    },
+    {
+      "minute": 6,
+      "side": "buy",
+      "quantity": 10,
+      "move": 0.002
+    },
+    {
+      "minute": 9,
+      "side": "sell",
+      "quantity": 10,
+      "move": 0.007
+    },
+    {
+      "minute": 12,
+      "side": "buy",
+      "quantity": 10,
+      "move": 0.004
+    },
+    {
+      "minute": 15,
+      "side": "sell",
+      "quantity": 10,
+      "move": 0.009
+    },
+    {
+      "minute": 18,
+      "side": "buy",
+      "quantity": 10,
+      "move": 0.006
+    },
+    {
+      "minute": 21,
+      "side": "sell",
+      "quantity": 10,
+      "move": -0.006
+    },
+    {
+      "minute": 24,
+      "side": "buy",
+      "quantity": 20,
+      "move": -0.006
+    }
+  ]
+}

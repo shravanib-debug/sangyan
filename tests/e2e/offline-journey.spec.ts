@@ -51,6 +51,8 @@ test("the whole manual journey runs offline after the first load", async ({ page
   await page.getByLabel("Trade amount (INR)").fill("25000");
   await page.getByLabel("Money source").selectOption("borrowed");
   await page.getByLabel("Type of borrowing").selectOption("instant_loan");
+  await page.getByLabel("To make back a loss").check();
+  await page.getByLabel("I will decide as it goes").check();
   await page.getByLabel("Why this trade now?").fill("I want to win back yesterday's loss");
   await page.getByLabel("What is the exit condition?").fill("None yet");
   await page.getByRole("button", { name: "Evaluate Decision" }).click();
@@ -59,6 +61,7 @@ test("the whole manual journey runs offline after the first load", async ({ page
   await expect(page.getByText("L3 ·")).toBeVisible();
   await expect(page.getByText("Money source: borrowed money")).toBeVisible();
   await expect(page.getByText("Rule applied: borrowed money always gets at least a 2-minute pause.")).toBeVisible();
+  await expect(page.getByText(/You told us this trade is to make back a loss/)).toBeVisible();
   await expect(page.getByRole("timer")).toContainText("Locked by your Pact");
   await expect(page.getByRole("button", { name: "I understand, continue anyway" })).toHaveCount(0);
   await expect(page.getByText("cannot block an order")).toBeVisible();

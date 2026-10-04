@@ -1,0 +1,38 @@
+{
+  "id": "loss-then-bigger-entry",
+  "symbol": "RELIANCE-EQ",
+  "startMinuteIst": 870,
+  "basePriceRupees": {
+    "min": 1380,
+    "max": 1470
+  },
+  "pact": null,
+  "demonstrates": {
+    "signals": [
+      "revenge"
+    ],
+    "explanationCodes": [
+      "signal.revenge.triggered"
+    ]
+  },
+  "steps": [
+    {
+      "minute": 0,
+      "side": "buy",
+      "quantity": 50,
+      "move": 0
+    },
+    {
+      "minute": 11,
+      "side": "sell",
+      "quantity": 50,
+      "move": -0.019
+    },
+    {
+      "minute": 14,
+      "side": "buy",
+      "quantity": 100,
+      "move": -0.02
+    }
+  ]
+}
