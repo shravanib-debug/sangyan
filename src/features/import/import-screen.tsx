@@ -43,7 +43,7 @@ export function ImportScreen() {
   };
 
   return (
-    <div className="space-y-6 max-w-lg mx-auto pb-12">
+    <div className="responsive-page space-y-6 pb-12">
       <header>
         <h1 className="text-2xl font-black">{t("importHistory.title")}</h1>
         <p className="text-gray-600 font-medium">{t("importHistory.subtitle")}</p>

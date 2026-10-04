@@ -7,7 +7,7 @@ export function PanicCompanion() {
   const { t } = useTranslation();
 
   return (
-    <div className="space-y-6 max-w-lg mx-auto pb-12">
+    <div className="responsive-page narrow space-y-6 pb-12">
       <header className="text-center space-y-2">
         <h1 className="text-3xl font-black text-red-700">{t("panic.title")}</h1>
         <p className="text-xl font-medium text-gray-700">{t("panic.subtitle")}</p>

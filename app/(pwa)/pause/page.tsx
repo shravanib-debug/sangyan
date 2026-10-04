@@ -88,8 +88,8 @@ function PauseScreen() {
   const decided = pause.outcome !== "waiting";
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 px-4 py-8">
-      <div className="max-w-md mx-auto w-full flex-1 flex flex-col justify-center space-y-6">
+    <div className="responsive-page narrow flex flex-col min-h-screen px-4 py-8">
+      <div className="w-full flex-1 flex flex-col justify-center space-y-6">
         <h1 className="text-3xl font-bold text-gray-900 text-center">{t("pause.title")}</h1>
 
         {simulated && (

@@ -169,8 +169,8 @@ export function SettingsScreen() {
       : null;
 
   return (
-    <main className="flex flex-col min-h-screen bg-gray-50 text-gray-900 px-6 py-12">
-      <div className="max-w-md mx-auto w-full space-y-6">
+    <main className="responsive-page flex flex-col min-h-screen text-gray-900 px-6 py-12">
+      <div className="w-full space-y-6">
         <h1 className="text-3xl font-bold">{t("settings.title")}</h1>
 
         {!reachable && (
