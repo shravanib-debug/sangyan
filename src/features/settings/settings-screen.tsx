@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAccountState } from "@/features/account/use-account-state";
 import { disablePush, enablePush, hasPushSubscription, pushSupport } from "@/services/push-service";
+import { formatDateTime } from "@/i18n/format";
 import { localDatabase } from "@/storage/local/database";
 import { isSyncEnabled, setSyncEnabled } from "@/storage/local/sync";
 
@@ -39,6 +40,7 @@ export function SettingsScreen() {
   const { t, i18n } = useTranslation();
   const { state, reachable, reload } = useAccountState();
   const notice = useSearchParams()?.get("broker") ?? null;
+  const router = useRouter();
 
   const [localSync, setLocalSync] = useState(false);
   const [pushOn, setPushOn] = useState(false);
@@ -144,7 +146,8 @@ export function SettingsScreen() {
     run(async () => {
       const { clearLocalData } = await import("@/storage/local/database");
       await clearLocalData();
-      window.location.href = "/";
+      router.replace("/");
+      router.refresh();
     });
   };
 
@@ -155,7 +158,8 @@ export function SettingsScreen() {
       if (!response.ok) throw new Error("delete");
       const { clearLocalData } = await import("@/storage/local/database");
       await clearLocalData();
-      window.location.href = "/";
+      router.replace("/");
+      router.refresh();
     });
   };
 
@@ -245,7 +249,7 @@ export function SettingsScreen() {
           )}
           {brokerActive && state?.broker.expiresAt && (
             <p className="text-sm text-gray-600">
-              {t("settings.brokerExpires", { time: new Date(state.broker.expiresAt).toLocaleString(i18n.language) })}
+              {t("settings.brokerExpires", { time: formatDateTime(state.broker.expiresAt, i18n.language) })}
             </p>
           )}
 

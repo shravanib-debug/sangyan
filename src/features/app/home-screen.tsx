@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { logout } from "../../../app/auth/actions";
 import { useAccountState } from "@/features/account/use-account-state";
+import { formatDateTime } from "@/i18n/format";
 import { localDatabase } from "@/storage/local/database";
 
 import { LanguageSwitcher } from "./language-switcher";
@@ -77,7 +78,7 @@ export function HomeScreen() {
           <h2 id="inbox-title">{t("home.inboxTitle")}</h2>
           {waiting.map((pause) => (
             <a key={pause.id} className="button" href={`/pause?pauseId=${pause.id}`}>
-              {t("home.inboxItem", { time: new Date(pause.started_at).toLocaleString(i18n.language) })}
+              {t("home.inboxItem", { time: formatDateTime(pause.started_at, i18n.language) })}
             </a>
           ))}
         </section>
@@ -108,12 +109,13 @@ export function HomeScreen() {
       </section>
 
       <section className="card stack">
-        <h2 className="text-lg font-bold">Hackathon Demo Features</h2>
+        <h2 className="text-lg font-bold">{t("home.moreTools")}</h2>
         <div className="grid grid-cols-2 gap-2 mt-2">
-          <Link className="button secondary text-sm py-2" href="/import">Local Import & Review</Link>
-          <Link className="button secondary text-sm py-2" href="/simulator">Monte Carlo Simulator</Link>
-          <Link className="button bg-red-100 text-red-900 text-sm py-2" href="/panic">Panic Companion</Link>
-          <Link className="button secondary text-sm py-2" href="/review">Post-Loss Review</Link>
+          <Link className="button secondary text-sm py-2" href="/import">{t("home.toolImport")}</Link>
+          <Link className="button secondary text-sm py-2" href="/simulator">{t("home.toolSimulator")}</Link>
+          <Link className="button bg-red-100 text-red-900 text-sm py-2" href="/panic">{t("home.toolPanic")}</Link>
+          <Link className="button secondary text-sm py-2" href="/review">{t("home.toolReview")}</Link>
+          <Link className="button secondary text-sm py-2" href="/journal">{t("home.toolJournal")}</Link>
         </div>
       </section>
       <p className="muted">{t("common.limitation")}</p>

@@ -29,6 +29,10 @@ body {
   font-family: Arial, "Noto Sans Devanagari", sans-serif;
 }
 
+html[data-locale-pending] body {
+  visibility: hidden;
+}
+
 a {
   color: inherit;
 }
