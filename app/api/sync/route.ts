@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   // Sequential: a pause depends on the assessment written by its check-in.
   const results = [];
   for (const item of parsed.data.items) {
-    results.push(await processSyncItem(context, item));
+    results.push(await processSyncItem(context, { ...item, payload: item.payload }));
   }
   return NextResponse.json({ results });
 }

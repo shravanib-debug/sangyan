@@ -23,7 +23,7 @@ export async function POST() {
     await supabase.auth.signOut();
 
     return NextResponse.json({ success: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Failed to delete account" }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error && err.message ? err.message : "Failed to delete account" }, { status: 500 });
   }
 }
