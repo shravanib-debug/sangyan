@@ -43,7 +43,7 @@ export function SimulatorScreen() {
   const lossPercentages = [5, 10, 20, 50, 75, 90, 100];
 
   return (
-    <div className="space-y-6 max-w-lg mx-auto pb-12">
+    <main className="space-y-6 max-w-lg mx-auto pb-12">
       <header>
         <h1 className="text-2xl font-black">{t("simulator.title")}</h1>
         <p className="text-gray-600 font-medium">{t("simulator.subtitle")}</p>
@@ -115,7 +115,7 @@ export function SimulatorScreen() {
         </div>
       </section>
 
-      <p className="text-xs text-gray-500 px-2 font-medium">{t("simulator.disclaimer")}</p>
-    </div>
+      <p className="text-xs text-gray-600 px-2 font-medium">{t("simulator.disclaimer")}</p>
+    </main>
   );
 }

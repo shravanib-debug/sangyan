@@ -32,7 +32,7 @@
 | Broker worker staging URL/health | `TBD` |
 | Broker worker production URL/health | `TBD` |
 | Zerodha app approval/terms check | `TBD` |
-| Repository URL | `TBD` |
+| Repository URL | `https://github.com/shravanib-debug/sangyan.git` |
 
 | Member assignment | Person | Backup/reviewer |
 |---|---|---|
@@ -59,10 +59,10 @@
 | M2 Local walking skeleton | End B2 | DONE | 2 / 2 | C + D | 2026-10-03 |
 | M3 Secure cloud and broker connection | B3-B4 | DONE | 3 / 3 | A + D | 2026-10-03 |
 | M4 Connected demonstration | B4-B5 | DONE | 2 / 2 | A + B + C + D | 2026-10-03 |
-| M5 Complete demo and polish | B5-B6 | TODO | 0 / 11 | C + D | |
+| M5 Complete demo and polish | B5-B6 | REVIEW | 11 / 11 | C + D | 2026-10-04 |
 | M6 Freeze and submission | B6-B7 | TODO | 0 / 3 | A + D | |
 
-Progress: **22 / 35 tasks done**.
+Progress: **32 / 35 tasks done**.
 
 ---
 
@@ -90,10 +90,10 @@ Progress: **22 / 35 tasks done**.
 | T18 | Panic companion | C | P1 | B5 | T2 | DONE | C | main | panic-companion.tsx | |
 | T19 | Post-loss process review | C | P1 | B5 | T6 | DONE | C | main | post-loss-review.tsx | First product cut |
 | T20 | Privacy, consent, broker disconnect, export, deletion | D + C | P0 | B3-B5 | T29-T31,T34-T35 | DONE | C + D | main | app/api/account/delete, settings-screen.tsx | |
-| T21 | Performance and accessibility | C + D | P0 | B4-B5 | T12,T24 | DONE | C | main | lighthouserc.js, a11y.spec.ts, globals.css (motion/contrast) | |
+| T21 | Performance and accessibility | C + D | P0 | B4-B5 | T12,T24 | DONE | C | working-all | `npm run e2e` (32/32, including axe checks) | Automated checks passed 2026-10-04; device matrix remains open. |
 | T22 | Synthetic evaluation | B | P1 | B4 | T4,T6 | DONE | B | main | synthetic-eval.ts, synthetic-eval.test.ts | |
 | T23 | Deployment and submission | A + D | P0 | B6-B7 | M5 | TODO | | | | |
-| T24 | PWA manifest, SW, install, update, offline | C | P0 | B0-B2 | T1 | DONE | C | main | verify pass | |
+| T24 | PWA manifest, SW, install, update, offline | C | P0 | B0-B2 | T1 | DONE | C | working-all | `npm run build` (8/8 routes precached); `npm run e2e` offline journey passed | Manual install/update and device matrix remain open. |
 | T25 | CI and repository governance | D + A | P0 | B0 | T1 | DONE | D | main | verify pass | |
 | T26 | en/hi/mr i18n foundation | C | P0 | B0-B2 | T1 | DONE | C | main | verify pass | |
 | T27 | Pitch deck | D | P0 | B3-B6 | M2 | TODO | | | | |
@@ -249,6 +249,11 @@ Progress: **22 / 35 tasks done**.
 ---
 
 ## 9. Standup template
+
+### 2026-10-04 (working-all verification)
+- Done: Removed the Windows-only Lightning CSS binary from direct dependencies; fixed Settings and Simulator accessibility landmarks/contrast; switched the production build script to Webpack after Turbopack failed locally while binding an internal port.
+- Evidence: `npm run verify` passed (21 files/166 tests, lint, typecheck, secret scan, build); `npm run e2e` passed (32/32); service worker precached 8/8 offline routes.
+- Still required: real Supabase/Auth, Edge Function, live Zerodha, device, deployment, and release-artifact checks.
 
 ```text
 ### YYYY-MM-DD HH:MM IST (block Bx)

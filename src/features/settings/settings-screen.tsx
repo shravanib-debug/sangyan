@@ -169,7 +169,7 @@ export function SettingsScreen() {
       : null;
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 text-gray-900 px-6 py-12">
+    <main className="flex flex-col min-h-screen bg-gray-50 text-gray-900 px-6 py-12">
       <div className="max-w-md mx-auto w-full space-y-6">
         <h1 className="text-3xl font-bold">{t("settings.title")}</h1>
 
@@ -198,7 +198,11 @@ export function SettingsScreen() {
           ) : (
             <>
               <p className="text-gray-600">{t("settings.signedOut")}</p>
-              <Link href="/login" className="block text-center p-4 bg-blue-600 text-white rounded-xl font-bold">
+              <Link
+                href="/login"
+                className="block text-center p-4 bg-blue-600 rounded-xl font-bold"
+                style={{ color: "#ffffff" }}
+              >
                 {t("settings.signIn")}
               </Link>
             </>
@@ -326,6 +330,6 @@ export function SettingsScreen() {
           {t("common.backHome")}
         </Link>
       </div>
-    </div>
+    </main>
   );
 }
