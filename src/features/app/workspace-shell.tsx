@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { initialOf, refreshAccountState, useAccountState } from "@/features/account/use-account-state";
+
 import { logout } from "../../../app/auth/actions";
 
 type NavItem = {
@@ -41,7 +43,21 @@ function NavLink({ item, compact = false }: Readonly<{ item: NavItem; compact?: 
   );
 }
 
+async function signOut() {
+  try {
+    await logout();
+  } finally {
+    // logout() ends in a redirect, which arrives here as a throw; refresh either way.
+    void refreshAccountState();
+  }
+}
+
 export function WorkspaceShell({ children }: Readonly<{ children: ReactNode }>) {
+  const { state } = useAccountState();
+  const user = state?.user ?? null;
+  const name = user?.displayName ?? "Guest";
+  const initial = initialOf(user ? name : undefined);
+
   return (
     <div className="workspace">
       <aside className="workspace-sidebar" aria-label="Primary navigation">
@@ -56,11 +72,15 @@ export function WorkspaceShell({ children }: Readonly<{ children: ReactNode }>) 
         <div className="workspace-sidebar-bottom">
           <NavLink item={{ href: "/settings", label: "Settings", icon: "⚙" }} />
           <div className="workspace-profile">
-            <span className="avatar">A</span>
-            <span className="workspace-profile-copy"><strong>Aditya</strong><small>Free plan</small></span>
-            <form action={logout} className="workspace-logout-form">
-              <button type="submit" className="workspace-logout" aria-label="Log out">↪</button>
-            </form>
+            <span className="avatar">{initial}</span>
+            <span className="workspace-profile-copy"><strong>{name}</strong><small>{user ? "Free plan" : "Not signed in"}</small></span>
+            {user ? (
+              <form action={signOut} className="workspace-logout-form">
+                <button type="submit" className="workspace-logout" aria-label="Log out">↪</button>
+              </form>
+            ) : (
+              <Link href="/login" className="workspace-logout" aria-label="Sign in">→</Link>
+            )}
           </div>
         </div>
       </aside>
@@ -74,7 +94,7 @@ export function WorkspaceShell({ children }: Readonly<{ children: ReactNode }>) 
           </div>
           <div className="workspace-topbar-actions">
             <button className="icon-button" aria-label="Notifications">♧</button>
-            <span className="avatar">A</span>
+            <span className="avatar" title={name}>{initial}</span>
           </div>
         </header>
         <main className="workspace-content">{children}</main>

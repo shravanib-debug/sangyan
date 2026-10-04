@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAccountState } from "@/features/account/use-account-state";
+import { updateDisplayName } from "../../../app/auth/actions";
 import { disablePush, enablePush, hasPushSubscription, pushSupport } from "@/services/push-service";
 import { formatDateTime } from "@/i18n/format";
 import { localDatabase } from "@/storage/local/database";
@@ -44,7 +45,8 @@ export function SettingsScreen() {
 
   const [localSync, setLocalSync] = useState(false);
   const [pushOn, setPushOn] = useState(false);
-  const [agreed, setAgreed] = useState(false);
+  const [nameDraft, setNameDraft] = useState<string | null>(null);
+  const [nameSaved, setNameSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -94,18 +96,19 @@ export function SettingsScreen() {
       if (!(await setConsent("journal_sync", granted))) throw new Error("consent");
     });
 
-  const connectBroker = () =>
+  const saveName = (formData: FormData) =>
     run(async () => {
-      if (!(await setConsent("broker_monitoring", true))) throw new Error("consent");
-      // A full navigation: the connect route redirects to Zerodha's hosted login.
-      window.open("/api/brokers/zerodha/connect", "_self");
+      setNameSaved(false);
+      const result = await updateDisplayName(formData);
+      if ("error" in result) return setMessage(result.error);
+      setNameDraft(null);
+      setNameSaved(true);
     });
 
   const disconnectBroker = () =>
     run(async () => {
       const response = await fetch("/api/brokers/zerodha/disconnect", { method: "POST" });
       if (!response.ok) throw new Error("disconnect");
-      setAgreed(false);
     });
 
   const togglePush = () =>
@@ -194,7 +197,33 @@ export function SettingsScreen() {
             {t("settings.accountTitle")}
           </h2>
           {signedIn ? (
-            <p>{t("home.signedInAs", { email: state?.user?.email ?? "" })}</p>
+            <>
+              <p>{t("home.signedInAs", { email: state?.user?.email ?? "" })}</p>
+              <form action={saveName} className="space-y-2">
+                <label htmlFor="display-name" className="block text-sm font-medium">
+                  {t("settings.nameLabel")}
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="display-name"
+                    name="displayName"
+                    required
+                    maxLength={80}
+                    autoComplete="name"
+                    value={nameDraft ?? state?.user?.displayName ?? ""}
+                    onChange={(event) => {
+                      setNameDraft(event.target.value);
+                      setNameSaved(false);
+                    }}
+                    className="flex-1 p-3 border border-gray-300 rounded-xl"
+                  />
+                  <button type="submit" disabled={busy} className="px-4 bg-blue-600 text-white rounded-xl font-bold disabled:opacity-60">
+                    {t("settings.nameSave")}
+                  </button>
+                </div>
+                {nameSaved && <p role="status" className="text-sm text-green-700">{t("settings.nameSaved")}</p>}
+              </form>
+            </>
           ) : (
             <>
               <p className="text-gray-600">{t("settings.signedOut")}</p>
@@ -265,18 +294,11 @@ export function SettingsScreen() {
             </button>
           ) : (
             <>
-              <label className="flex items-start space-x-3">
-                <input
-                  type="checkbox"
-                  className="w-6 h-6 mt-1"
-                  checked={agreed}
-                  onChange={(event) => setAgreed(event.target.checked)}
-                />
-                <span className="text-sm">{t("settings.brokerConsent")}</span>
-              </label>
-              <button className={primary} disabled={busy || !agreed} onClick={() => void connectBroker()}>
+              <p className="text-sm">{t("settings.brokerConsent")}</p>
+              {/* Angel One is the supported demat account; its setup and demo live on the broker page. */}
+              <Link href="/broker" className={`block text-center ${primary}`} style={{ color: "#ffffff" }}>
                 {t("settings.brokerConnect")}
-              </button>
+              </Link>
             </>
           )}
         </section>

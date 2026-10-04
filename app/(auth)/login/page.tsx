@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
+import { refreshAccountState } from "@/features/account/use-account-state";
+
 import { login, signup } from "../../auth/actions";
 
 export default function LoginPage() {
@@ -23,7 +25,11 @@ export default function LoginPage() {
       }
     } catch (caught: unknown) {
       // A successful action redirects; Next signals that by throwing, which must not show as an error.
-      if ((caught as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw caught;
+      if ((caught as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) {
+        // Signed in: every screen should now show this account, not the previous one.
+        void refreshAccountState();
+        throw caught;
+      }
       setError(t("auth.unexpected"));
       setLoading(false);
     }
@@ -41,6 +47,20 @@ export default function LoginPage() {
         )}
 
         <form className="space-y-4">
+          <div>
+            <label htmlFor="displayName" className="block text-sm font-medium mb-1">
+              {t("auth.name")}
+            </label>
+            <input
+              id="displayName"
+              name="displayName"
+              type="text"
+              maxLength={80}
+              autoComplete="name"
+              className="w-full p-4 border border-gray-300 rounded-xl"
+            />
+            <p className="text-xs text-gray-600 mt-1">{t("auth.nameHint")}</p>
+          </div>
           <div>
             <label htmlFor="email" className="block text-sm font-medium mb-1">
               {t("auth.email")}

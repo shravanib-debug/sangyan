@@ -49,6 +49,8 @@ export const en = {
   auth: {
     title: "Sign in or create an account",
     email: "Email",
+    name: "Your name",
+    nameHint: "Needed only when creating a new account.",
     password: "Password",
     login: "Log in",
     signup: "Sign up",
@@ -300,6 +302,9 @@ export const en = {
   settings: {
     title: "Settings",
     accountTitle: "Account",
+    nameLabel: "Your name",
+    nameSave: "Save",
+    nameSaved: "Name saved.",
     signedOut: "You are using Thehrav as a guest. Sign in to sync across devices.",
     signIn: "Sign in",
     offlineNote: "You are offline. Account settings need a connection.",
@@ -310,12 +315,12 @@ export const en = {
     syncDisable: "Turn off sync",
     syncOn: "Sync is on.",
     journalSyncLabel: "Also sync the reasons I write (journal text)",
-    brokerTitle: "Zerodha connection",
+    brokerTitle: "Connect your demat account (using Angel One demat account)",
     brokerBody:
-      "Optional. Thehrav reads order updates only. It cannot place, change or cancel orders, and you never type your Zerodha password here.",
+      "Optional. Thehrav reads order updates from your Angel One demat account only. It cannot place, change or cancel orders, and you never type your Angel One password here.",
     brokerConsent:
-      "I agree to let Thehrav read my Zerodha order updates to notice patterns. I can disconnect at any time.",
-    brokerConnect: "Connect Zerodha",
+      "Thehrav will only read your Angel One order updates to notice patterns. You can disconnect at any time.",
+    brokerConnect: "Connect Angel One account",
     brokerDisconnect: "Disconnect and delete access",
     brokerSimulated: "Simulated replay: events are synthetic and do not come from your broker.",
     brokerExpires: "Session ends {{time}}.",
@@ -331,11 +336,11 @@ export const en = {
     notices: {
       consent_required: "Please agree to the connection terms first.",
       replay: "Connected in simulated replay mode.",
-      connected: "Zerodha connected.",
-      denied: "The Zerodha login was cancelled or denied.",
+      connected: "Angel One account connected.",
+      denied: "The Angel One login was cancelled or denied.",
       state_invalid: "That login link was not valid. Please start again.",
       state_replayed: "That login link was already used. Please start again.",
-      exchange_failed: "Zerodha did not complete the login. Please try again.",
+      exchange_failed: "Angel One did not complete the login. Please try again.",
       connect_failed: "The connection could not be saved. Please try again.",
       not_configured: "Broker connections are not set up on this server yet."
     },
