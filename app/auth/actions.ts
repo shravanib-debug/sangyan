@@ -44,7 +44,7 @@ export async function signup(formData: FormData) {
   redirect("/home");
 }
 
-export async function updateDisplayName(formData: FormData) {
+export async function updateDisplayName(formData: FormData): Promise<{ error: string } | { ok: true }> {
   const name = displayName(formData);
   if (!name) return { error: "Please enter a name." };
 
