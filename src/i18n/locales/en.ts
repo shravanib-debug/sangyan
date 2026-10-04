@@ -27,7 +27,13 @@ export const en = {
     inboxItem: "A pause from {{time}} is waiting for you.",
     signedInAs: "Signed in as {{email}}",
     logout: "Log out",
-    guestNote: "You are using Thehrav as a guest. Your data stays on this device."
+    guestNote: "You are using Thehrav as a guest. Your data stays on this device.",
+    moreTools: "More tools",
+    toolImport: "Import history",
+    toolSimulator: "Simulator",
+    toolPanic: "Pause companion",
+    toolReview: "Process review",
+    toolJournal: "Decision journal"
   },
   onboarding: {
     languageTitle: "Select your language",
@@ -154,8 +160,10 @@ export const en = {
     simulate: "Run Simulation",
     baselineRuin: "Wipeout risk (No rules)",
     ruleBoundRuin: "Wipeout risk (With limits)",
+    scenarioDependentNote: "These results use the starting capital, leverage, daily loss limit, and volatility above.",
     disclaimer: "These figures are based on mathematical models using random walks. They do not predict actual market movements or your personal trading outcomes.",
     recoveryTitle: "Recovery Required",
+    recoveryInvariantNote: "Fixed recovery math: these percentages do not depend on the simulation inputs.",
     recoveryMath: "A {{loss}}% loss requires a {{gain}}% gain to break even.",
     recoveryWipeout: "Wipeout (100% loss) cannot be recovered."
   },
@@ -168,7 +176,14 @@ export const en = {
     flaggedTimeline: "Flagged Timeline",
     replayDiffTitle: "Retrospective Difference",
     replayDiffBody: "This shows theoretical pauses based on your rules. Thehrav cannot avoid losses, but it can introduce friction.",
-    noFlags: "No rules were breached in the imported dataset."
+    noFlags: "No rules were breached in the imported dataset.",
+    flaggedCount: "{{flagged}} / {{total}} trades flagged",
+    quantity: "Qty",
+    price: "Price",
+    side: {
+      buy: "BUY",
+      sell: "SELL"
+    }
   },
   settings: {
     title: "Settings",
@@ -227,6 +242,85 @@ export const en = {
     deleteAccount: "Delete cloud account",
     deleteLocalConfirm: "This will permanently delete all data from this device. Are you sure?",
     deleteAccountConfirm: "This will permanently delete your cloud account and all synced data, and log you out. Are you sure?"
+  },
+  panic: {
+    title: "Pause.",
+    subtitle: "Breathe. Nothing needs to be decided this minute.",
+    whatTitle: "What is happening?",
+    whatBody: "You tapped the pause button. That usually means a strong urge to act right away.",
+    contextTitle: "Worth remembering",
+    point1: "No single trade defines your financial future.",
+    point2: "Your rules were made when you were calm. Your Pact is there for moments like this.",
+    point3: "You can come back to this decision after the pause.",
+    waitBody: "Take a full 5 minutes before making any decision.",
+    done: "I have paused. Go back."
+  },
+  review: {
+    title: "Process review",
+    subtitle: "Reflecting on recent activity",
+    loading: "Loading your review…",
+    loadFailed: "The review could not be loaded from this device.",
+    emptyTitle: "Nothing to review yet",
+    emptyBody: "This review uses only what is stored on this device: trades you import and check-ins you complete. Neither is here yet, so there are no signals to show.",
+    emptyImport: "Import trade history",
+    emptyCheckin: "Start a check-in",
+    intro: "The goal here is not to grade the outcome, since markets are unpredictable, but to look at your process.",
+    historyTitle: "Your imported history",
+    noTrades: "No trade history has been imported.",
+    historySummary: "{{flagged}} of {{total}} imported trades touched your rules.",
+    historyNone: "Your rules were not touched in the imported history.",
+    signalCount: "{{name}}: {{count}}",
+    recentFlaggedTitle: "Most recent flagged trades",
+    decisionsTitle: "Your recent decisions",
+    decisionsNone: "No check-ins yet.",
+    reasonLabel: "Reason",
+    exitLabel: "Exit plan",
+    tierLabel: "Pause level {{level}}",
+    outcome: {
+      waiting: "Pause still waiting",
+      continued: "You continued",
+      abandoned: "You stepped away",
+      expired: "Pause expired"
+    },
+    reflectTitle: "Self-reflection",
+    reflectQuestion: "Did you follow the rules you set in your Pact?",
+    followed: "Yes, the process was followed",
+    breached: "No, rules were breached",
+    saved: {
+      followed: "Saved on this device ({{time}}): the process was followed.",
+      breached: "Saved on this device ({{time}}): rules were breached."
+    },
+    privacy: "This reflection is private and stays on your device."
+  },
+  signalNames: {
+    revenge: "Quick follow-up after a loss",
+    overtrade: "Many trades in a short time",
+    late_night: "Late-night trading window",
+    loss_hold: "Losses held longer than wins",
+    pact_breach: "Pact limit crossed",
+    money_source: "Money source"
+  },
+  signalLine: "Observed {{observed}} (threshold {{threshold}})",
+  units: {
+    minutes: "{{value}} minutes",
+    trades: "{{value}} trades",
+    times: "{{value}}x"
+  },
+  journal: {
+    subtitle: "Your past decisions and the signals behind them, kept on this device.",
+    loading: "Loading your journal…",
+    loadFailed: "The journal could not be loaded from this device.",
+    emptyTitle: "No journal entries yet",
+    emptyBody: "Entries appear here after you complete a check-in or import trade history. Nothing has been recorded on this device yet.",
+    kindCheckin: "Check-in",
+    kindTrade: "Flagged imported trade",
+    riskLabel: "Risk and pause",
+    signalsLabel: "Signals",
+    noSignals: "None of your rules were touched.",
+    outcomeLabel: "Pause outcome",
+    reflectionTitle: "Latest process reflection",
+    showMore: "Show more ({{remaining}} left)",
+    privacy: "This journal is private and stays on your device."
   },
   screens: {
     onboarding: "Onboarding",

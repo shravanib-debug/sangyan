@@ -105,7 +105,12 @@ async function syncCheckIn(context: SyncContext, item: SyncItemInput): Promise<S
   const result = evaluateRisk({
     history: tradesFromEvents((historyRows ?? []) as TradeEventRow[]),
     pact: pactState.effective ?? DEFAULT_PACT,
-    checkIn: { fundSource: checkIn.fundSource, borrowKind: checkIn.borrowKind, timestamp: checkIn.timestamp },
+    checkIn: {
+      amountPaise: checkIn.amountPaise,
+      fundSource: checkIn.fundSource,
+      borrowKind: checkIn.borrowKind,
+      timestamp: checkIn.timestamp
+    },
     nowEpochMs,
     config: DEFAULT_ENGINE_CONFIG
   });

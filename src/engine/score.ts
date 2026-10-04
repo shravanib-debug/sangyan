@@ -35,7 +35,7 @@ export function evaluateRisk(request: WorkerDetectRequest): RiskResult {
   if (request.checkIn) {
     const triage = evaluateMoneySource({
       source: request.checkIn.fundSource,
-      amountPaise: 0
+      amountPaise: request.checkIn.amountPaise
     });
     if (triage.hardRuleTier > hardRuleTier) {
       hardRuleTier = triage.hardRuleTier;

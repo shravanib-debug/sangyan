@@ -15,6 +15,9 @@ test("runs synthetic evaluation and returns probabilities", () => {
   expect(results[1]?.complianceProb).toBe(0.5);
   expect(results[2]?.complianceProb).toBe(0.7);
 
-  // Since it uses Math.random (seeded ideally, but random here), we just check presence
+  // The default RNG is seeded, so the same input always gives the same result
+  expect(runSyntheticEvaluation("loss-averse", dummyHistory, [0.5], 100)).toEqual(
+    runSyntheticEvaluation("loss-averse", dummyHistory, [0.5], 100)
+  );
   expect(results[0]?.totalLossBaseline).toBeGreaterThan(0);
 });

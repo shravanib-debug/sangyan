@@ -1,18 +1,15 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
+
+const subscribeNever = () => () => {};
+const detectSupport = () => typeof window !== "undefined" && "speechSynthesis" in window;
 
 export function useSpeech() {
   const { i18n } = useTranslation();
-  const [supported, setSupported] = useState(false);
+  const supported = useSyncExternalStore(subscribeNever, detectSupport, () => false);
   const [speaking, setSpeaking] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      setSupported(true);
-    }
-  }, []);
 
   const speak = useCallback((text: string) => {
     if (!supported) return;

@@ -7,6 +7,7 @@ import { describeHit } from "@/features/pause/describe-hit";
 import { runCheckIn, pauseExpiry } from "@/services/checkin-service";
 import { loadPactState, savePact } from "@/services/pact-service";
 import { loadLocalPause, remainingSeconds, resolvePause } from "@/services/pause-service";
+import { loadJournal } from "@/services/journal-service";
 import { ThehravDatabase } from "@/storage/local/database";
 import { checkInSyncSchema, pactSchema, pauseSyncSchema } from "@/lib/validation/schemas";
 
@@ -120,6 +121,61 @@ describe("check-in and pause (offline, local-first)", () => {
     const description = describeHit(hit!);
     expect(description.key).toBe("signal.source.triggered");
     expect(description.observedKey).toBe("signal.sourceName.borrowed");
+  });
+
+  it("materially changes the complete persisted flow for a high-risk re-entry", async () => {
+    await savePact(form, pactDeps());
+
+    const low = await runCheckIn(input, checkInDeps());
+    const lowView = await loadLocalPause(db, low.pauseId);
+    expect(lowView?.assessment.score).toBe(0);
+    expect(lowView?.assessment.signalHits).toEqual([]);
+    expect(lowView?.pause.tier).toBe("L0");
+    expect(lowView?.pause.expiresAt).toBeUndefined();
+
+    clock += 60_000;
+    await db.trades.put({
+      id: "recent-loss",
+      timestamp: new Date(clock - 5 * 60_000).toISOString(),
+      symbol: "INFY",
+      side: "sell",
+      quantity: 10,
+      pricePaise: 10_000,
+      pnlPaise: -20_000,
+      source: "csv"
+    });
+
+    const highInput = {
+      ...input,
+      amountRupees: 2_000,
+      source: "borrowed" as const,
+      borrowKind: "instant_loan" as const,
+      reason: "I want to recover the recent loss",
+      exitCondition: "No clear exit plan"
+    };
+    const high = await runCheckIn(highInput, checkInDeps());
+    const highView = await loadLocalPause(db, high.pauseId);
+
+    expect(highView?.assessment.score).toBe(0.75);
+    expect(highView?.assessment.signalHits.map((hit) => hit.signal)).toEqual([
+      "revenge",
+      "pact_breach",
+      "money_source"
+    ]);
+    expect(highView?.assessment.hardRuleOverrides).toEqual(["money_source_borrowed", "pact_breach_lock"]);
+    expect(highView?.pause.tier).toBe("L3");
+    expect(remainingSeconds(highView!.pause, clock)).toBe(30 * 60);
+
+    await resolvePause(high.pauseId, "abandoned", { db, enqueue });
+    const journal = await loadJournal(db, clock);
+    const highEntry = journal.items.find(
+      (item) => item.kind === "checkin" && item.record.checkIn.reason === highInput.reason
+    );
+    if (highEntry?.kind !== "checkin") throw new Error("expected the high-risk check-in in the journal");
+    expect(highEntry.record.checkIn.amountPaise).toBe(200_000);
+    expect(highEntry.record.assessment?.assessmentId).toBe(high.assessmentId);
+    expect(highEntry.record.tier).toBe("L3");
+    expect(highEntry.record.outcome).toBe("abandoned");
   });
 
   it("keeps the countdown across a reload because it derives from the stored expiry", async () => {

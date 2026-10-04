@@ -13,7 +13,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build && node scripts/generate-sw.mjs",
+    "build": "next build --webpack && node scripts/generate-sw.mjs",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
@@ -71,7 +71,6 @@
     "fast-check": "4.10.2",
     "jsdom": "30.1.1",
     "lightningcss": "1.33.0",
-    "lightningcss-win32-x64-msvc": "1.33.0",
     "prettier": "3.9.9",
     "supabase": "2.119.0",
     "tailwindcss": "4.3.3",

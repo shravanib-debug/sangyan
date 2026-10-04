@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAccountState } from "@/features/account/use-account-state";
 import { disablePush, enablePush, hasPushSubscription, pushSupport } from "@/services/push-service";
+import { formatDateTime } from "@/i18n/format";
 import { localDatabase } from "@/storage/local/database";
 import { isSyncEnabled, setSyncEnabled } from "@/storage/local/sync";
 
@@ -39,6 +40,7 @@ export function SettingsScreen() {
   const { t, i18n } = useTranslation();
   const { state, reachable, reload } = useAccountState();
   const notice = useSearchParams()?.get("broker") ?? null;
+  const router = useRouter();
 
   const [localSync, setLocalSync] = useState(false);
   const [pushOn, setPushOn] = useState(false);
@@ -144,7 +146,8 @@ export function SettingsScreen() {
     run(async () => {
       const { clearLocalData } = await import("@/storage/local/database");
       await clearLocalData();
-      window.location.href = "/";
+      router.replace("/");
+      router.refresh();
     });
   };
 
@@ -155,7 +158,8 @@ export function SettingsScreen() {
       if (!response.ok) throw new Error("delete");
       const { clearLocalData } = await import("@/storage/local/database");
       await clearLocalData();
-      window.location.href = "/";
+      router.replace("/");
+      router.refresh();
     });
   };
 
@@ -165,7 +169,7 @@ export function SettingsScreen() {
       : null;
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 text-gray-900 px-6 py-12">
+    <main className="flex flex-col min-h-screen bg-gray-50 text-gray-900 px-6 py-12">
       <div className="max-w-md mx-auto w-full space-y-6">
         <h1 className="text-3xl font-bold">{t("settings.title")}</h1>
 
@@ -194,7 +198,11 @@ export function SettingsScreen() {
           ) : (
             <>
               <p className="text-gray-600">{t("settings.signedOut")}</p>
-              <Link href="/login" className="block text-center p-4 bg-blue-600 text-white rounded-xl font-bold">
+              <Link
+                href="/login"
+                className="block text-center p-4 bg-blue-600 rounded-xl font-bold"
+                style={{ color: "#ffffff" }}
+              >
                 {t("settings.signIn")}
               </Link>
             </>
@@ -245,7 +253,7 @@ export function SettingsScreen() {
           )}
           {brokerActive && state?.broker.expiresAt && (
             <p className="text-sm text-gray-600">
-              {t("settings.brokerExpires", { time: new Date(state.broker.expiresAt).toLocaleString(i18n.language) })}
+              {t("settings.brokerExpires", { time: formatDateTime(state.broker.expiresAt, i18n.language) })}
             </p>
           )}
 
@@ -322,6 +330,6 @@ export function SettingsScreen() {
           {t("common.backHome")}
         </Link>
       </div>
-    </div>
+    </main>
   );
 }
