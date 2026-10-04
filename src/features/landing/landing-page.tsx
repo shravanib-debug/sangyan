@@ -48,7 +48,7 @@ function AuthPanel({ mode, onModeChange, onClose }: Readonly<{ mode: AuthMode; o
         <h2 id="auth-title">{mode === "signup" ? "Start thinking differently." : "Welcome back."}</h2>
         <p>{mode === "signup" ? "Create your account and build calmer decision habits." : "Let’s make your next decision a little calmer."}</p>
         <form className="landing-auth-form" action={formAction}>
-          {mode === "signup" && <label>Name<input name="name" type="text" autoComplete="name" placeholder="Your name" /></label>}
+          {mode === "signup" && <label>Name<input name="displayName" type="text" required maxLength={80} autoComplete="name" placeholder="Your name" /></label>}
           <label>Email<input name="email" type="email" required autoComplete="email" placeholder="you@example.com" /></label>
           <label>Password<input name="password" type="password" required minLength={8} autoComplete={mode === "signup" ? "new-password" : "current-password"} placeholder="At least 8 characters" /></label>
           {mode === "signin" && <div className="landing-auth-options"><label className="landing-checkbox"><input type="checkbox" /> Remember me</label><button type="button">Forgot password?</button></div>}

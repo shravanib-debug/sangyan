@@ -26,7 +26,6 @@ interface Snapshot {
 // made on one screen shows up in the sidebar, top bar and every other screen at once.
 let snapshot: Snapshot = { state: null, reachable: true };
 let inflight: Promise<void> | null = null;
-let loaded = false;
 const listeners = new Set<() => void>();
 
 function publish(next: Snapshot) {
@@ -45,7 +44,6 @@ export function refreshAccountState(): Promise<void> {
     } catch {
       publish({ ...snapshot, reachable: false });
     } finally {
-      loaded = true;
       inflight = null;
     }
   })();
@@ -64,7 +62,9 @@ export function useAccountState() {
   const current = useSyncExternalStore(subscribe, () => snapshot, () => serverSnapshot);
 
   useEffect(() => {
-    if (!loaded) void refreshAccountState();
+    // Re-read on every mount: a sign-in from the landing page or /login redirects here
+    // without telling this store, so cached state could still say "Guest".
+    void refreshAccountState();
     // A session can change in another tab; pick that up when the user comes back.
     const onFocus = () => void refreshAccountState();
     window.addEventListener("focus", onFocus);

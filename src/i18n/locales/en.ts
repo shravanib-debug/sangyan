@@ -46,6 +46,16 @@ export const en = {
     authSync: "Sign in (Enable cloud sync)",
     authNote: "You can create an account later to sync data across devices."
   },
+  game: {
+    title: "Take a breather",
+    subtitle: "A quick game while your cooling-off pause runs. Play as often as you like.",
+    close: "Close game",
+    start: "Press Space or tap to start",
+    over: "Game over. Press Space or tap to play again",
+    overAnnounce: "Game over. Score {{score}}.",
+    controls: "Jump with Space, ↑ or a tap. Low birds must be jumped; high birds pass overhead. Works offline.",
+    canvasLabel: "Runner game. Jump over the cacti and low birds."
+  },
   auth: {
     title: "Sign in or create an account",
     email: "Email",
@@ -261,6 +271,7 @@ export const en = {
     coolingLabel: "Cooling-off",
     coolingUntil: "{{tier}} pause active until {{time}}",
     coolingNone: "Not active",
+    playGame: "Play a short game while you wait",
     scenarios: {
       "calm-day": { title: "Calm, planned session", description: "Two planned round trips spread across the morning, each closed with a small gain." },
       "loss-then-bigger-entry": { title: "Loss, then a bigger re-entry", description: "A losing exit, then a new position twice the size three minutes later. No Pact saved yet." },

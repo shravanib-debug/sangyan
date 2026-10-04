@@ -20,7 +20,7 @@ export async function login(formData: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed);
   if (error) return { error: error.message };
-  redirect("/settings");
+  redirect("/home");
 }
 
 function displayName(formData: FormData): string {
@@ -41,7 +41,7 @@ export async function signup(formData: FormData) {
   if (data.session && data.user) {
     await supabase.from("profiles").upsert({ user_id: data.user.id, display_name: name });
   }
-  redirect("/settings");
+  redirect("/home");
 }
 
 export async function updateDisplayName(formData: FormData) {

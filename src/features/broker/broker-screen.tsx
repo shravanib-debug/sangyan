@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { PAUSE_POLICY } from "@/config/defaults";
 import { card, primary } from "@/features/app/theme";
+import { CooldownGameDialog } from "@/features/games/cooldown-game-dialog";
 import { AssessmentExplanation } from "@/features/pause/signal-lines";
 import { DEFAULT_PACT, eventToRow } from "@/lib/pipeline/assess";
 import { tradesFromEvents } from "@/lib/pipeline/history";
@@ -59,6 +60,7 @@ export function BrokerScreen() {
   const scenario = getDemoScenario(scenarioId);
   const pact = scenarioPact(scenario, DEFAULT_PACT);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [gameOpen, setGameOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -96,6 +98,13 @@ export function BrokerScreen() {
 
   const running = steps.length > 0 && shown < steps.length;
   const latest = shown > 0 ? steps[shown - 1] : undefined;
+  const coolingText = !latest?.pause
+    ? t("broker.coolingNone")
+    : latest.pause.expiresAt
+      ? t("broker.coolingUntil", { tier: latest.pause.tier, time: formatTime(latest.pause.expiresAt, i18n.language) })
+      : latest.pause.tier === "L1"
+        ? t("broker.coolingL1", { seconds: PAUSE_POLICY.l1Seconds })
+        : t("broker.coolingL2", { minutes: PAUSE_POLICY.l2Seconds / 60 });
   // Realised P&L per sell comes from the same FIFO pairing the engine uses.
   const pnlByEvent = new Map(
     tradesFromEvents(steps.map(({ event }) => eventToRow(event)))
@@ -270,23 +279,22 @@ export function BrokerScreen() {
             </div>
             <div className="p-3 rounded-xl bg-orange-50 border border-orange-300">
               <dt className="text-sm text-gray-600">{t("broker.coolingLabel")}</dt>
-              <dd className="text-sm font-semibold">
-                {!latest.pause
-                  ? t("broker.coolingNone")
-                  : latest.pause.expiresAt
-                    ? t("broker.coolingUntil", {
-                        tier: latest.pause.tier,
-                        time: formatTime(latest.pause.expiresAt, i18n.language)
-                      })
-                    : latest.pause.tier === "L1"
-                      ? t("broker.coolingL1", { seconds: PAUSE_POLICY.l1Seconds })
-                      : t("broker.coolingL2", { minutes: PAUSE_POLICY.l2Seconds / 60 })}
-              </dd>
+              <dd className="text-sm font-semibold">{coolingText}</dd>
+              {latest.pause && (
+                <button
+                  type="button"
+                  onClick={() => setGameOpen(true)}
+                  className="mt-3 w-full px-3 py-2 rounded-lg bg-white border-2 border-orange-300 text-sm font-bold text-gray-900 hover:bg-orange-100"
+                >
+                  {t("broker.playGame")}
+                </button>
+              )}
             </div>
           </dl>
           <p className="mt-3 text-xs text-gray-600">{t("broker.afterEventNote")}</p>
         </section>
       )}
+      {gameOpen && <CooldownGameDialog onClose={() => setGameOpen(false)} pauseNote={latest?.pause ? coolingText : undefined} />}
     </main>
   );
 }
